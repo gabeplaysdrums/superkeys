@@ -6,7 +6,7 @@
 #include <interception.h>
 #include "SuperKeys.h"
 
-void SUPERKEYS_API Test()
+void SUPERKEYS_API SuperKeys_Test()
 {
 	(void)interception_create_context();
 }

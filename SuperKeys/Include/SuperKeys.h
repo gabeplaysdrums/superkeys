@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-	void SUPERKEYS_API Test();
+	void SUPERKEYS_API SuperKeys_Test();
 
 #ifdef __cplusplus
 }
