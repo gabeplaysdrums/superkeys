@@ -3,4 +3,9 @@
 
 #include "stdafx.h"
 
+#include <interception.h>
 
+void Test()
+{
+	(void)interception_create_context();
+}
