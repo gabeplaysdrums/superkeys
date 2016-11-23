@@ -4,8 +4,9 @@
 #include "stdafx.h"
 
 #include <interception.h>
+#include "SuperKeys.h"
 
-void Test()
+void SUPERKEYS_API Test()
 {
 	(void)interception_create_context();
 }
