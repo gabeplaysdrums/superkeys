@@ -34,12 +34,28 @@
 extern "C" {
 #endif
 
+	#define SUPERKEYS_MAX_CHORD_CODE_COUNT (8)
+
+	typedef struct
+	{
+		unsigned short code;
+		unsigned short state;
+	} SuperKeysKeyState;
+
+	typedef struct
+	{
+		unsigned short nKeyStates;
+		SuperKeysKeyState keyStates[SUPERKEYS_MAX_CHORD_CODE_COUNT];
+	} SuperKeysChord;
+
 	typedef void* SuperKeysContext;
 	SuperKeysContext SUPERKEYS_API SuperKeys_CreateContext();
 	void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context);
 
-	typedef bool(*SuperKeysCallback)(unsigned short code, unsigned short state);
-	void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context, SuperKeysCallback callback);
+	typedef bool(*SuperKeysFilterCallback)();
+	int SUPERKEYS_API SuperKeys_AddFilter(SuperKeysContext context, const SuperKeysChord* chords, int nChords, SuperKeysFilterCallback callback);
+
+	void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context);
 
 #ifdef __cplusplus
 }
@@ -53,7 +69,7 @@ namespace SuperKeys
 			m_context(SuperKeys_CreateContext(), &SuperKeys_DestroyContext)
 		{}
 
-		void Run() { SuperKeys_Run(m_context.get(), nullptr); }
+		void Run() { SuperKeys_Run(m_context.get()); }
 
 	private:
 		std::unique_ptr<void, decltype(&SuperKeys_DestroyContext)> m_context;
