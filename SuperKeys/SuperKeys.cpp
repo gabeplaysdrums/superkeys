@@ -39,7 +39,7 @@ void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context)
 	interception_destroy_context(context);
 }
 
-void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context)
+void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context, SuperKeysCallback callback)
 {
 	InterceptionContext interception = (InterceptionContext)context;
 	InterceptionDevice device;
@@ -49,15 +49,17 @@ void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context)
 
 	while (interception_receive(interception, device = interception_wait(interception), (InterceptionStroke*)&stroke, 1) > 0)
 	{
-		DEBUG_OUTPUT("recv << device: " << device << ", code: " << stroke.code);
+		DEBUG_OUTPUT("recv << device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
 
-		if (stroke.code == 46) // C
+		if (callback)
 		{
-			DEBUG_OUTPUT("! blocking keystroke");
-			continue;
+			if (!callback(stroke.code, stroke.state))
+			{
+				continue;
+			}
 		}
 
-		DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code);
+		DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
 		interception_send(interception, device, (InterceptionStroke *)&stroke, 1);
 	}
 }

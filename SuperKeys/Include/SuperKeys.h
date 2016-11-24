@@ -35,10 +35,11 @@ extern "C" {
 #endif
 
 	typedef void* SuperKeysContext;
-
 	SuperKeysContext SUPERKEYS_API SuperKeys_CreateContext();
 	void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context);
-	void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context);
+
+	typedef bool(*SuperKeysCallback)(unsigned short code, unsigned short state);
+	void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context, SuperKeysCallback callback);
 
 #ifdef __cplusplus
 }
@@ -52,7 +53,7 @@ namespace SuperKeys
 			m_context(SuperKeys_CreateContext(), &SuperKeys_DestroyContext)
 		{}
 
-		void Run() { SuperKeys_Run(m_context.get()); }
+		void Run() { SuperKeys_Run(m_context.get(), nullptr); }
 
 	private:
 		std::unique_ptr<void, decltype(&SuperKeys_DestroyContext)> m_context;
