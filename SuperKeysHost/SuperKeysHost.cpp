@@ -10,6 +10,8 @@ int main()
 {
 	SuperKeysEngine engine;
 
+	engine.Run();
+
     return 0;
 }
 

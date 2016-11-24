@@ -38,6 +38,7 @@ extern "C" {
 
 	SuperKeysContext SUPERKEYS_API SuperKeys_CreateContext();
 	void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context);
+	void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context);
 
 #ifdef __cplusplus
 }
@@ -50,6 +51,8 @@ namespace SuperKeys
 		SuperKeysEngine() :
 			m_context(SuperKeys_CreateContext(), &SuperKeys_DestroyContext)
 		{}
+
+		void Run() { SuperKeys_Run(m_context.get()); }
 
 	private:
 		std::unique_ptr<void, decltype(&SuperKeys_DestroyContext)> m_context;
