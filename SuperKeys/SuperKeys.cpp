@@ -12,6 +12,7 @@ using namespace std;
 
 #define DEBUG_OUTPUT(...) \
 { \
+	cout << __VA_ARGS__ << endl; \
 	ostringstream oss; \
 	oss << __VA_ARGS__ << endl; \
 	OutputDebugStringA(oss.str().c_str()); \
@@ -27,8 +28,9 @@ namespace SuperKeys
 
 SuperKeysContext SUPERKEYS_API SuperKeys_CreateContext()
 {
-	DEBUG_OUTPUT("interception_create_context()");
-	return interception_create_context();
+	auto context = interception_create_context();
+	DEBUG_OUTPUT("interception_create_context() -> " << context);
+	return context;
 }
 
 void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context)
@@ -51,9 +53,11 @@ void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context)
 
 		if (stroke.code == 46) // C
 		{
+			DEBUG_OUTPUT("! blocking keystroke");
 			continue;
 		}
 
+		DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code);
 		interception_send(interception, device, (InterceptionStroke *)&stroke, 1);
 	}
 }
