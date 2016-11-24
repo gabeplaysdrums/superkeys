@@ -4,10 +4,11 @@
 #include "stdafx.h"
 #include <SuperKeys.h>
 
+using namespace SuperKeys;
 
 int main()
 {
-	SuperKeys_Test();
+	SuperKeysEngine engine;
 
     return 0;
 }

@@ -29,13 +29,33 @@
 #endif
 
 #ifdef __cplusplus
+#include <memory>
+
 extern "C" {
 #endif
 
-	void SUPERKEYS_API SuperKeys_Test();
+	typedef void* SuperKeysContext;
+
+	SuperKeysContext SUPERKEYS_API SuperKeys_CreateContext();
+	void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context);
 
 #ifdef __cplusplus
 }
+
+namespace SuperKeys
+{
+	class SuperKeysEngine
+	{
+	public:
+		SuperKeysEngine() :
+			m_context(SuperKeys_CreateContext(), &SuperKeys_DestroyContext)
+		{}
+
+	private:
+		std::unique_ptr<void, decltype(&SuperKeys_DestroyContext)> m_context;
+	};
+}
+
 #endif
 
 #endif // _SUPERKEYS_H_
