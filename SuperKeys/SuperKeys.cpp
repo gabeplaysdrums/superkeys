@@ -20,6 +20,8 @@ using namespace std;
 	OutputDebugStringA(oss.str().c_str()); \
 }
 
+#define DEBUG_FILTER_MATCHING 0
+
 namespace SuperKeys
 {
 	namespace Details
@@ -83,7 +85,9 @@ namespace SuperKeys
 					for (auto& filterEntry : m_filters)
 					{
 						auto& chord = filterEntry.second.chords[filterEntry.second.nextChord];
+#if DEBUG_FILTER_MATCHING
 						DEBUG_OUTPUT("Next chord in filter " << filterEntry.first << " starts with " << chord[0].code);
+#endif
 
 						// Determine whether the next chord has been completed or the filter sequence has been broken
 
@@ -121,7 +125,9 @@ namespace SuperKeys
 
 						if (chordComplete)
 						{
+#if DEBUG_FILTER_MATCHING
 							DEBUG_OUTPUT("Chord is complete!");
+#endif
 							filterEntry.second.nextChord++;
 
 							if (filterEntry.second.nextChord == filterEntry.second.chords.size())
@@ -134,7 +140,9 @@ namespace SuperKeys
 						}
 						else if (sequenceBroken)
 						{
+#if DEBUG_FILTER_MATCHING
 							DEBUG_OUTPUT("Sequence broken!");
+#endif
 							filterEntry.second.nextChord = 0;
 						}
 					}
@@ -152,7 +160,9 @@ namespace SuperKeys
 
 					if (!handled)
 					{
+#if DEBUG_FILTER_MATCHING
 						DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
+#endif
 						interception_send(m_interception, device, (InterceptionStroke*)&stroke, 1);
 					}
 				}
@@ -192,11 +202,15 @@ int SUPERKEYS_API SuperKeys_AddFilter(SuperKeysContext context, const SuperKeysC
 {
 	Filter filter;
 
+#if DEBUG_FILTER_MATCHING
 	DEBUG_OUTPUT("Adding filter with " << nChords << " chords");
+#endif
 	
 	for (int i = 0; i < nChords; i++)
 	{
+#if DEBUG_FILTER_MATCHING
 		DEBUG_OUTPUT("Adding filter for chord with " << chords[i].nKeyStates << " key states");
+#endif
 		filter.chords.push_back(Details::Chord(chords[i].keyStates, chords[i].keyStates + chords[i].nKeyStates));
 	}
 	

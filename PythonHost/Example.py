@@ -6,4 +6,5 @@ SUPERKEYS = {
     'z': None,
     'x': None,
     'c': None,
+    'LeftCtrl+LeftShift+Esc': None,
 }
