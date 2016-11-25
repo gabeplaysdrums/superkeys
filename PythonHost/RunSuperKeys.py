@@ -54,6 +54,8 @@ INTERCEPTION_KEY_TERMSRV_VKPACKET = 0x20
 KEY_MAP = dict((
     ('LeftCtrl',    (29, INTERCEPTION_KEY_DOWN)),
     ('RightCtrl',   (29, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
+    ('Z',           (44, INTERCEPTION_KEY_DOWN)),
+    ('X',           (45, INTERCEPTION_KEY_DOWN)),
     ('C',           (46, INTERCEPTION_KEY_DOWN)),
     ('V',           (47, INTERCEPTION_KEY_DOWN)),
     ('LeftWin',     (91, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),

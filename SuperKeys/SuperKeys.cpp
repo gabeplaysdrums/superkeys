@@ -66,7 +66,17 @@ namespace SuperKeys
 				{
 					DEBUG_OUTPUT("recv << device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
 
-					m_lastKnownKeyState[stroke.code] = stroke.state;
+					if (m_currentState.find(stroke.code) == m_currentState.end())
+					{
+						m_currentState[stroke.code].state = stroke.state;
+					}
+					else
+					{
+						KnownKeyState knownKeyState;
+						knownKeyState.state = stroke.state;
+						m_currentState[stroke.code] = std::move(knownKeyState);
+					}
+
 					bool handled = false;
 
 					// check to see if any filters are satisfied
@@ -75,18 +85,37 @@ namespace SuperKeys
 						auto& chord = filterEntry.second.chords[filterEntry.second.nextChord];
 						DEBUG_OUTPUT("Next chord in filter " << filterEntry.first << " starts with " << chord[0].code);
 
-						bool chordComplete = true;
-						bool chordPartial = false;
-						for (const auto& keyState : chord)
+						// Determine whether the next chord has been completed or the filter sequence has been broken
+
+						// initially assume any non-empty chord is complete
+						bool chordComplete = !chord.empty();
+
+						// a sequence is broken if a down event is received that is not part of the next chord
+						bool sequenceBroken = (stroke.state & 0x1) == INTERCEPTION_KEY_DOWN;
+
+						if (chord.size() == 1)
 						{
-							auto it = m_lastKnownKeyState.find(keyState.code);
-							if (it != m_lastKnownKeyState.end() && it->second == keyState.state)
+							// a single-key chord is complete if its state is matched by the current stroke
+							chordComplete = chord[0].code == stroke.code && chord[0].state == stroke.state;
+							sequenceBroken = sequenceBroken && !chordComplete;
+						}
+						else
+						{
+							// a multi-key chord is complete if all keys in the chord are down
+
+							for (const auto& keyState : chord)
 							{
-								chordPartial = true;
-							}
-							else
-							{
-								chordComplete = false;
+								auto it = m_currentState.find(keyState.code);
+								if (it == m_currentState.end() || it->second.state != keyState.state)
+								{
+									chordComplete = false;
+								}
+
+								// a sequence is not broken if a down event is received that is part of the chord
+								if (sequenceBroken && keyState.code == keyState.code && (stroke.state & ~0x1) == (keyState.state & ~0x1))
+								{
+									sequenceBroken = false;
+								}
 							}
 						}
 
@@ -98,16 +127,27 @@ namespace SuperKeys
 							if (filterEntry.second.nextChord == filterEntry.second.chords.size())
 							{
 								// all chords in the rule are complete!
-								handled = handled || filterEntry.second.callback();
+								bool result = filterEntry.second.callback();
+								handled = handled || result;
 								filterEntry.second.nextChord = 0;
 							}
 						}
-						//else if (!chordPartial)
-						//{
-						//	DEBUG_OUTPUT("Chord is not partial!");
-						//	// if the user has started an entirely different chord, cancel this filter
-						//	filterEntry.second.nextChord = 0;
-						//}
+						else if (sequenceBroken)
+						{
+							DEBUG_OUTPUT("Sequence broken!");
+							filterEntry.second.nextChord = 0;
+						}
+					}
+
+					// if the key press was down and handled, block up key presses
+					if ((stroke.state & 0x1) == INTERCEPTION_KEY_DOWN && handled)
+					{
+						m_currentState[stroke.code].blockKeyUp = false;
+					}
+					// otherwise, if the key press was up and up key presses are being blocked, block the keypress
+					else if ((stroke.state & 0x1) == INTERCEPTION_KEY_UP && m_currentState[stroke.code].blockKeyUp)
+					{
+						handled = true;
 					}
 
 					if (!handled)
@@ -122,7 +162,14 @@ namespace SuperKeys
 			InterceptionContext m_interception;
 			int m_nextFilterId = 0;
 			map<int, Filter> m_filters;
-			map<unsigned short, unsigned short> m_lastKnownKeyState;
+
+			struct KnownKeyState
+			{
+				unsigned short state = 0;
+				bool blockKeyUp = false;
+			};
+
+			map<unsigned short, KnownKeyState> m_currentState;
 		};
 	}
 }

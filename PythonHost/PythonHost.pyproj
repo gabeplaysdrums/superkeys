@@ -51,6 +51,7 @@
        the BeforeBuild and AfterBuild targets below. -->
   <!--<Target Name="CoreCompile" />-->
   <Target Name="BeforeBuild">
+    <Message Text="BeforeBuild message!" />
   </Target>
   <Target Name="AfterBuild">
   </Target>
