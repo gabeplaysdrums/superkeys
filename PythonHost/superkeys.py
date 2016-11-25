@@ -151,10 +151,10 @@ class SuperKeysFilterContext:
         # press each key in the chord down in order, then up in reverse order
         for keyStates, simulate_up_strokes in chords_data:
             for code, state in keyStates:
-                print('[python] send >> code: %d, state: %d' % (code, state))
+                #print('[python] send >> code: %d, state: %d' % (code, state))
                 lib.SuperKeys_Send(self._filterContext, code, state)
             if simulate_up_strokes:
-                print('simulating up strokes')
+                #print('simulating up strokes')
                 for code, state in reversed(keyStates):
                     lib.SuperKeys_Send(self._filterContext, code, state | INTERCEPTION_KEY_UP)
                     import time

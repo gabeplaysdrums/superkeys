@@ -79,7 +79,7 @@ class SuperKeysFilter:
         self.action = action
 
     def _raw_callback(self, rawFilterContext):
-        print('[python] filter triggered! ' + self.filter_text)
+        #print('[python] filter triggered! ' + self.filter_text)
         context = SuperKeysFilterContext(rawFilterContext)
         self.action(context)
 

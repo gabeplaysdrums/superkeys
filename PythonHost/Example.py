@@ -24,7 +24,7 @@ def make_navigation_function(stroke):
     def f(context):
         global nav_enabled
         if nav_enabled:
-            print('stroke: ' + stroke)
+            #print('stroke: ' + stroke)
             context.cancel()
             context.send(stroke)
     return f

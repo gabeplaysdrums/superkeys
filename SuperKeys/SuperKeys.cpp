@@ -12,6 +12,10 @@
 #include <vector>
 using namespace std;
 
+#define ENABLE_DEBUG_OUTPUT 1
+#define DEBUG_FILTER_MATCHING 0
+
+#if ENABLE_DEBUG_OUTPUT
 #define DEBUG_OUTPUT(...) \
 { \
 	cout << __VA_ARGS__ << endl; \
@@ -19,8 +23,9 @@ using namespace std;
 	oss << __VA_ARGS__ << endl; \
 	OutputDebugStringA(oss.str().c_str()); \
 }
-
-#define DEBUG_FILTER_MATCHING 0
+#else
+#define DEBUG_OUTPUT(...)
+#endif
 
 namespace SuperKeys
 {
@@ -106,6 +111,9 @@ namespace SuperKeys
 				{
 					DEBUG_OUTPUT("recv << device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
 
+					bool skipDrainPendingStrokes = false;
+					m_pendingStrokes.push_back(stroke);
+
 					if (m_currentState.find(stroke.code) == m_currentState.end())
 					{
 						m_currentState[stroke.code].state = stroke.state;
@@ -127,6 +135,7 @@ namespace SuperKeys
 						DEBUG_OUTPUT("Next chord in filter " << filterEntry.first << " starts with " << chord[0].code);
 #endif
 
+
 						// Determine whether the next chord has been completed or the filter sequence has been broken
 
 						// initially assume any non-empty chord is complete
@@ -137,9 +146,14 @@ namespace SuperKeys
 
 						if (chord.size() == 1)
 						{
-							// a single-key chord is complete if its state is matched by the current stroke
+							// a single-key chord is complete if its state is skipDrainPendingStrokes by the current stroke
 							chordComplete = chord[0].code == stroke.code && chord[0].state == stroke.state;
 							sequenceBroken = sequenceBroken && !chordComplete;
+
+							if (chordComplete)
+							{
+								skipDrainPendingStrokes = true;
+							}
 						}
 						else
 						{
@@ -154,9 +168,10 @@ namespace SuperKeys
 								}
 
 								// a sequence is not broken if a down event is received that is part of the chord
-								if (sequenceBroken && keyState.code == keyState.code && (stroke.state & ~0x1) == (keyState.state & ~0x1))
+								if (keyState.code == keyState.code && (stroke.state & ~0x1) == (keyState.state & ~0x1))
 								{
 									sequenceBroken = false;
+									skipDrainPendingStrokes = true;
 								}
 							}
 						}
@@ -175,6 +190,7 @@ namespace SuperKeys
 								filterEntry.second.callback(&filterContext);
 								canceled = canceled || filterContext.IsCanceled();
 								filterEntry.second.nextChord = 0;
+								skipDrainPendingStrokes = false;
 							}
 						}
 						else if (sequenceBroken)
@@ -197,10 +213,16 @@ namespace SuperKeys
 						canceled = true;
 					}
 
-					if (!canceled)
+					if (canceled)
 					{
-						DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
-						interception_send(m_interception, device, (InterceptionStroke*)&stroke, 1);
+						m_pendingStrokes.clear();
+						skipDrainPendingStrokes = true;
+					}
+
+					if (!skipDrainPendingStrokes && !m_pendingStrokes.empty())
+					{
+						DEBUG_OUTPUT("send >> device: " << device << ", " << m_pendingStrokes.size() << " strokes");
+						interception_send(m_interception, device, (InterceptionStroke*)&m_pendingStrokes.front(), m_pendingStrokes.size());
 					}
 				}
 			}
@@ -217,6 +239,7 @@ namespace SuperKeys
 			};
 
 			map<unsigned short, KnownKeyState> m_currentState;
+			vector<InterceptionKeyStroke> m_pendingStrokes;
 		};
 	}
 }
