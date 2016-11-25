@@ -187,11 +187,15 @@ class SuperKeysFilter:
             for code_text in filter(None, delim.split(chord_text)):
                 code_text = code_text.strip()
                 code_text = code_text.lower()
+                state_union = 0
+                if code_text[0] == '-':
+                    state_union = INTERCEPTION_KEY_UP
+                    code_text = code_text[1:]
                 if not code_text or code_text not in KEY_MAP:
                     valid = False
                     break
-                keyState = KEY_MAP[code_text]
-                keyStates.append(keyState)
+                code, state = KEY_MAP[code_text]
+                keyStates.append((code, state | state_union))
             if not keyStates:
                 valid = False
             if not valid:
