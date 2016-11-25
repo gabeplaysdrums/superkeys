@@ -10,6 +10,8 @@ import sys
 import ctypes
 import imp
 import re
+import superkeys
+from superkeys import *
 
 
 def parse_command_line():
@@ -40,104 +42,9 @@ def parse_command_line():
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-SUPERKEYS_FILTER_CALLBACK = ctypes.CFUNCTYPE(ctypes.c_bool)
+SUPERKEYS_FILTER_CALLBACK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p)
 SUPERKEYS_MAX_CHORD_CODE_COUNT = 8
 
-INTERCEPTION_KEY_DOWN             = 0x00
-INTERCEPTION_KEY_UP               = 0x01
-INTERCEPTION_KEY_E0               = 0x02
-INTERCEPTION_KEY_E1               = 0x04
-INTERCEPTION_KEY_TERMSRV_SET_LED  = 0x08
-INTERCEPTION_KEY_TERMSRV_SHADOW   = 0x10
-INTERCEPTION_KEY_TERMSRV_VKPACKET = 0x20
-
-KEY_MAP = dict((
-    ('Esc',         (1, INTERCEPTION_KEY_DOWN)),
-    ('Escape',      (1, INTERCEPTION_KEY_DOWN)),
-    ('1',           (2, INTERCEPTION_KEY_DOWN)),
-    ('2',           (3, INTERCEPTION_KEY_DOWN)),
-    ('3',           (4, INTERCEPTION_KEY_DOWN)),
-    ('4',           (5, INTERCEPTION_KEY_DOWN)),
-    ('5',           (6, INTERCEPTION_KEY_DOWN)),
-    ('6',           (7, INTERCEPTION_KEY_DOWN)),
-    ('7',           (8, INTERCEPTION_KEY_DOWN)),
-    ('8',           (9, INTERCEPTION_KEY_DOWN)),
-    ('9',           (10, INTERCEPTION_KEY_DOWN)),
-    ('0',           (11, INTERCEPTION_KEY_DOWN)),
-    ('-',           (12, INTERCEPTION_KEY_DOWN)),
-    ('=',           (13, INTERCEPTION_KEY_DOWN)),
-    ('Backspace',   (14, INTERCEPTION_KEY_DOWN)),
-    ('Tab',         (15, INTERCEPTION_KEY_DOWN)),
-    ('Q',           (16, INTERCEPTION_KEY_DOWN)),
-    ('W',           (17, INTERCEPTION_KEY_DOWN)),
-    ('E',           (18, INTERCEPTION_KEY_DOWN)),
-    ('R',           (19, INTERCEPTION_KEY_DOWN)),
-    ('T',           (20, INTERCEPTION_KEY_DOWN)),
-    ('Y',           (21, INTERCEPTION_KEY_DOWN)),
-    ('U',           (22, INTERCEPTION_KEY_DOWN)),
-    ('I',           (23, INTERCEPTION_KEY_DOWN)),
-    ('O',           (24, INTERCEPTION_KEY_DOWN)),
-    ('P',           (25, INTERCEPTION_KEY_DOWN)),
-    ('[',           (26, INTERCEPTION_KEY_DOWN)),
-    ('{',           (26, INTERCEPTION_KEY_DOWN)),
-    (']',           (27, INTERCEPTION_KEY_DOWN)),
-    ('}',           (27, INTERCEPTION_KEY_DOWN)),
-    ('Enter',       (28, INTERCEPTION_KEY_DOWN)),
-    ('Return',      (28, INTERCEPTION_KEY_DOWN)),
-    ('LeftCtrl',    (29, INTERCEPTION_KEY_DOWN)),
-    ('RightCtrl',   (29, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
-    ('A',           (30, INTERCEPTION_KEY_DOWN)),
-    ('S',           (31, INTERCEPTION_KEY_DOWN)),
-    ('D',           (32, INTERCEPTION_KEY_DOWN)),
-    ('F',           (33, INTERCEPTION_KEY_DOWN)),
-    ('G',           (34, INTERCEPTION_KEY_DOWN)),
-    ('H',           (35, INTERCEPTION_KEY_DOWN)),
-    ('J',           (36, INTERCEPTION_KEY_DOWN)),
-    ('K',           (37, INTERCEPTION_KEY_DOWN)),
-    ('L',           (38, INTERCEPTION_KEY_DOWN)),
-    (';',           (39, INTERCEPTION_KEY_DOWN)),
-    (':',           (39, INTERCEPTION_KEY_DOWN)),
-    ('\'',          (40, INTERCEPTION_KEY_DOWN)),
-    ('"',           (40, INTERCEPTION_KEY_DOWN)),
-    ('`',           (41, INTERCEPTION_KEY_DOWN)),
-    ('~',           (41, INTERCEPTION_KEY_DOWN)),
-    ('LeftShift',   (42, INTERCEPTION_KEY_DOWN)),
-    ('\\',          (43, INTERCEPTION_KEY_DOWN)),
-    ('|',           (43, INTERCEPTION_KEY_DOWN)),
-    ('Z',           (44, INTERCEPTION_KEY_DOWN)),
-    ('X',           (45, INTERCEPTION_KEY_DOWN)),
-    ('C',           (46, INTERCEPTION_KEY_DOWN)),
-    ('V',           (47, INTERCEPTION_KEY_DOWN)),
-    ('B',           (48, INTERCEPTION_KEY_DOWN)),
-    ('N',           (49, INTERCEPTION_KEY_DOWN)),
-    ('M',           (50, INTERCEPTION_KEY_DOWN)),
-    (',',           (51, INTERCEPTION_KEY_DOWN)),
-    ('<',           (51, INTERCEPTION_KEY_DOWN)),
-    ('.',           (52, INTERCEPTION_KEY_DOWN)),
-    ('>',           (52, INTERCEPTION_KEY_DOWN)),
-    ('/',           (53, INTERCEPTION_KEY_DOWN)),
-    ('?',           (53, INTERCEPTION_KEY_DOWN)),
-    ('RightShift',  (54, INTERCEPTION_KEY_DOWN)),
-    ('LeftAlt',     (56, INTERCEPTION_KEY_DOWN)),
-    ('RightAlt',    (56, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
-    ('F1',          (59, INTERCEPTION_KEY_DOWN)),
-    ('F2',          (60, INTERCEPTION_KEY_DOWN)),
-    ('F3',          (61, INTERCEPTION_KEY_DOWN)),
-    ('F4',          (62, INTERCEPTION_KEY_DOWN)),
-    ('F5',          (63, INTERCEPTION_KEY_DOWN)),
-    ('F6',          (64, INTERCEPTION_KEY_DOWN)),
-    ('F7',          (65, INTERCEPTION_KEY_DOWN)),
-    ('F8',          (66, INTERCEPTION_KEY_DOWN)),
-    ('F9',          (67, INTERCEPTION_KEY_DOWN)),
-    ('F10',         (68, INTERCEPTION_KEY_DOWN)),
-    ('F11',         (87, INTERCEPTION_KEY_DOWN)),
-    ('F12',         (88, INTERCEPTION_KEY_DOWN)),
-    ('LeftWin',     (91, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
-    ('RightWin',    (92, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
-))
-
-#REVERSE_KEY_MAP = { v:k for k,v in KEY_MAP.items() }
-KEY_MAP = { k.lower():v for k,v in KEY_MAP.items() }
 
 class SUPERKEYS_KEY_STATE(ctypes.Structure):
     _fields_ = (
@@ -158,7 +65,7 @@ class SuperKeysFilter:
         self.action = action
         self.raw_callback_func = SUPERKEYS_FILTER_CALLBACK(self._raw_callback)
 
-    def _raw_callback(self):
+    def _raw_callback(self, rawFilterContext):
         """
         print('[python] recv << code=%d, state=%d' % (code, state));
 
@@ -170,6 +77,8 @@ class SuperKeysFilter:
 
         return True
         """
+        filterContext = SuperKeysFilterContext(rawFilterContext)
+        filterContext.send('LeftShift+x')
         print('[python] filter triggered! ' + self.filter_text)
         return True
 
@@ -221,26 +130,25 @@ class SuperKeysFilter:
 
 class SuperKeysEngine:
     def __init__(self):
-        self.context = lib.SuperKeys_CreateContext();
+        self.context = superkeys.lib.SuperKeys_CreateContext();
         self.filters = dict()
 
     def __del__(self):
-        lib.SuperKeys_DestroyContext(self.context)
+        superkeys.lib.SuperKeys_DestroyContext(self.context)
 
     def add_filter(self, filter):
         raw_chords, raw_chords_count = filter.make_raw()
-        lib.SuperKeys_AddFilter(self.context, ctypes.byref(raw_chords), ctypes.c_int(raw_chords_count), filter.raw_callback_func)
+        superkeys.lib.SuperKeys_AddFilter(self.context, ctypes.byref(raw_chords), ctypes.c_int(raw_chords_count), filter.raw_callback_func)
 
     def run(self):
-        lib.SuperKeys_Run(self.context);
+        superkeys.lib.SuperKeys_Run(self.context);
 
 
 if __name__ == '__main__':
     (options, args) = parse_command_line()
     config = imp.load_source('', args[0])
 
-    global lib
-    lib = ctypes.CDLL(os.path.join(SCRIPT_DIR, 'SuperKeys.dll'))
+    superkeys.lib = ctypes.CDLL(os.path.join(SCRIPT_DIR, 'SuperKeys.dll'))
 
     engine = SuperKeysEngine()
 

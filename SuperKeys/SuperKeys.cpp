@@ -35,6 +35,32 @@ namespace SuperKeys
 			size_t nextChord = 0;
 		};
 
+		struct FilterContext sealed
+		{
+		public:
+			FilterContext(
+				InterceptionContext interception,
+				InterceptionDevice device,
+				InterceptionKeyStroke baseStroke) :
+				m_interception(interception),
+				m_device(device),
+				m_baseStroke(baseStroke)
+			{
+			}
+
+			void Send(unsigned long code, unsigned long state)
+			{
+				m_baseStroke.code = code;
+				m_baseStroke.state = state;
+				interception_send(m_interception, m_device, (InterceptionStroke*)&m_baseStroke, 1);
+			}
+
+		private:
+			InterceptionContext m_interception;
+			InterceptionDevice m_device;
+			InterceptionKeyStroke m_baseStroke;
+		};
+
 		class Context sealed
 		{
 		public:
@@ -133,7 +159,9 @@ namespace SuperKeys
 							if (filterEntry.second.nextChord == filterEntry.second.chords.size())
 							{
 								// all chords in the rule are complete!
-								bool result = filterEntry.second.callback();
+								FilterContext filterContext(m_interception, device, stroke);
+
+								bool result = filterEntry.second.callback(&filterContext);
 								handled = handled || result;
 								filterEntry.second.nextChord = 0;
 							}
@@ -222,4 +250,9 @@ int SUPERKEYS_API SuperKeys_AddFilter(SuperKeysContext context, const SuperKeysC
 void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context)
 {
 	((Context*)context)->Run();
+}
+
+void SUPERKEYS_API SuperKeys_Send(SuperKeysFilterContext context, unsigned long code, unsigned long state)
+{
+	((FilterContext*)context)->Send(code, state);
 }
