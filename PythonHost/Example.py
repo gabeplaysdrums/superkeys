@@ -1,3 +1,5 @@
+import superkeys
+
 SUPERKEYS = {
     #'LeftCtrl + C': None,
     #'LeftCtrl + V': None,
@@ -9,5 +11,6 @@ SUPERKEYS = {
     #'LeftCtrl+LeftShift+Esc': None,
     ##'-LeftShift': None,
     #'LeftShift+RightShift': None,
-    'a': None,
+    'RightWin': 'LeftAlt+F4',
+    'a': 'w',
 }

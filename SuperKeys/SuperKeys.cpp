@@ -48,10 +48,21 @@ namespace SuperKeys
 			{
 			}
 
-			void Send(unsigned long code, unsigned long state)
+			void Cancel()
+			{
+				m_cancel = true;
+			}
+
+			bool IsCanceled() const
+			{
+				return m_cancel;
+			}
+
+			void Send(unsigned short code, unsigned short state)
 			{
 				m_baseStroke.code = code;
 				m_baseStroke.state = state;
+				DEBUG_OUTPUT("send >> device: " << m_device << ", code: " << code << ", state: " << state);
 				interception_send(m_interception, m_device, (InterceptionStroke*)&m_baseStroke, 1);
 			}
 
@@ -59,6 +70,7 @@ namespace SuperKeys
 			InterceptionContext m_interception;
 			InterceptionDevice m_device;
 			InterceptionKeyStroke m_baseStroke;
+			bool m_cancel = false;
 		};
 
 		class Context sealed
@@ -105,7 +117,7 @@ namespace SuperKeys
 						m_currentState[stroke.code] = std::move(knownKeyState);
 					}
 
-					bool handled = false;
+					bool canceled = false;
 
 					// check to see if any filters are satisfied
 					for (auto& filterEntry : m_filters)
@@ -160,9 +172,8 @@ namespace SuperKeys
 							{
 								// all chords in the rule are complete!
 								FilterContext filterContext(m_interception, device, stroke);
-
-								bool result = filterEntry.second.callback(&filterContext);
-								handled = handled || result;
+								filterEntry.second.callback(&filterContext);
+								canceled = canceled || filterContext.IsCanceled();
 								filterEntry.second.nextChord = 0;
 							}
 						}
@@ -175,22 +186,20 @@ namespace SuperKeys
 						}
 					}
 
-					// if the key press was down and handled, block up key presses
-					if ((stroke.state & 0x1) == INTERCEPTION_KEY_DOWN && handled)
+					// if the key press was down and canceled, block up key presses (otherwise, stop blocking up key presses)
+					if ((stroke.state & 0x1) == INTERCEPTION_KEY_DOWN)
 					{
-						m_currentState[stroke.code].blockKeyUp = false;
+						m_currentState[stroke.code].blockKeyUp = canceled;
 					}
 					// otherwise, if the key press was up and up key presses are being blocked, block the keypress
-					else if ((stroke.state & 0x1) == INTERCEPTION_KEY_UP && m_currentState[stroke.code].blockKeyUp)
+					else if (m_currentState[stroke.code].blockKeyUp)
 					{
-						handled = true;
+						canceled = true;
 					}
 
-					if (!handled)
+					if (!canceled)
 					{
-#if DEBUG_FILTER_MATCHING
 						DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
-#endif
 						interception_send(m_interception, device, (InterceptionStroke*)&stroke, 1);
 					}
 				}
@@ -252,7 +261,12 @@ void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context)
 	((Context*)context)->Run();
 }
 
-void SUPERKEYS_API SuperKeys_Send(SuperKeysFilterContext context, unsigned long code, unsigned long state)
+void SUPERKEYS_API SuperKeys_Cancel(SuperKeysFilterContext context)
+{
+	((FilterContext*)context)->Cancel();
+}
+
+void SUPERKEYS_API SuperKeys_Send(SuperKeysFilterContext context, unsigned short code, unsigned short state)
 {
 	((FilterContext*)context)->Send(code, state);
 }

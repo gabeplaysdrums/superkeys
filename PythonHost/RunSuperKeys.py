@@ -62,25 +62,26 @@ class SUPERKEYS_CHORD(ctypes.Structure):
 class SuperKeysFilter:
     def __init__(self, filter_text, action):
         self.filter_text = filter_text
-        self.action = action
         self.raw_callback_func = SUPERKEYS_FILTER_CALLBACK(self._raw_callback)
 
+        if action is None:
+            def action_cancel(context):
+                context.cancel()
+            action = action_cancel
+        elif type(action) is str:
+            delim = re.compile(r'\s*,\s*')
+            strokes = list(filter(None, delim.split(action)))
+            def action_send(context):
+                context.cancel()
+                context.send(*strokes)
+            action = action_send
+
+        self.action = action
+
     def _raw_callback(self, rawFilterContext):
-        """
-        print('[python] recv << code=%d, state=%d' % (code, state));
-
-        if code == 46: # c
-            print('[python] ! blocked keystroke')
-            return False
-
-        #self._callback()
-
-        return True
-        """
-        filterContext = SuperKeysFilterContext(rawFilterContext)
-        filterContext.send('LeftShift+x')
         print('[python] filter triggered! ' + self.filter_text)
-        return True
+        context = SuperKeysFilterContext(rawFilterContext)
+        self.action(context)
 
     def make_raw(self):
         delim = re.compile(r'\s*,\s*')

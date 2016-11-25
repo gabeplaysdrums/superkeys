@@ -104,6 +104,9 @@ class SuperKeysFilterContext:
     def __init__(self, filterContext):
         self._filterContext = filterContext
 
+    def cancel(self):
+        lib.SuperKeys_Cancel(self._filterContext)
+
     def send(self, *strokes):
         valid = True
         chords_data = []
@@ -115,6 +118,7 @@ class SuperKeysFilterContext:
             keyStates = []
             delim = re.compile(r'\s*\+\s*')
             contains_up_stroke = False
+            contains_down_stroke = False
             for code_text in filter(None, delim.split(chord_text)):
                 code_text = code_text.strip()
                 code_text = code_text.lower()
@@ -123,22 +127,29 @@ class SuperKeysFilterContext:
                     state_union = INTERCEPTION_KEY_UP
                     code_text = code_text[1:]
                     contains_up_stroke = True
+                if code_text[0] == '_' and len(code_text) > 1:
+                    state_union = INTERCEPTION_KEY_UP
+                    code_text = code_text[1:]
+                    contains_down_stroke = True
                 if not code_text or code_text not in KEY_MAP:
                     valid = False
                     break
                 code, state = KEY_MAP[code_text]
                 keyStates.append((code, state | state_union))
-            if not keyStates or (len(keyStates) > 1 and contains_up_stroke):
+            if not keyStates or (len(keyStates) > 1 and (contains_up_stroke or contains_down_stroke)):
                 valid = False
             if not valid:
                 break
-            chords_data.append(keyStates)
+            chords_data.append((keyStates, not contains_down_stroke and not contains_up_stroke))
         if not valid or not chords_data:
-            raise AssertionError('Invalid filter: ' + self.filter_text)
+            raise AssertionError('Invalid filter: ' + repr(strokes))
 
         # press each key in the chord down in order, then up in reverse order
-        for chord in chords_data:
-            for code, state in chord:
+        for keyStates, simulate_up_strokes in chords_data:
+            for code, state in keyStates:
+                print('[python] send >> code: %d, state: %d' % (code, state))
                 lib.SuperKeys_Send(self._filterContext, code, state)
-            for code, state in reversed(chord):
-                lib.SuperKeys_Send(self._filterContext, code, state | INTERCEPTION_KEY_UP)
+            if simulate_up_strokes:
+                print('simulating up strokes')
+                for code, state in reversed(keyStates):
+                    lib.SuperKeys_Send(self._filterContext, code, state | INTERCEPTION_KEY_UP)

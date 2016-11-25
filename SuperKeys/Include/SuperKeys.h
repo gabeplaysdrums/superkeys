@@ -53,12 +53,13 @@ extern "C" {
 	void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context);
 
 	typedef void* SuperKeysFilterContext;
-	typedef bool(*SuperKeysFilterCallback)(SuperKeysFilterContext context);
+	typedef void(*SuperKeysFilterCallback)(SuperKeysFilterContext context);
 	int SUPERKEYS_API SuperKeys_AddFilter(SuperKeysContext context, const SuperKeysChord* chords, int nChords, SuperKeysFilterCallback callback);
 
 	void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context);
 
-	void SUPERKEYS_API SuperKeys_Send(SuperKeysContext context, unsigned long code, unsigned long state);
+	void SUPERKEYS_API SuperKeys_Cancel(SuperKeysFilterContext context);
+	void SUPERKEYS_API SuperKeys_Send(SuperKeysFilterContext context, unsigned short code, unsigned short state);
 
 #ifdef __cplusplus
 }
