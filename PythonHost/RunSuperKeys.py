@@ -184,25 +184,27 @@ class SuperKeysFilter:
                 break
             keyStates = []
             delim = re.compile(r'\s*\+\s*')
+            contains_up_stroke = False
             for code_text in filter(None, delim.split(chord_text)):
                 code_text = code_text.strip()
                 code_text = code_text.lower()
                 state_union = 0
-                if code_text[0] == '-':
+                if code_text[0] == '-' and len(code_text) > 1:
                     state_union = INTERCEPTION_KEY_UP
                     code_text = code_text[1:]
+                    contains_up_stroke = True
                 if not code_text or code_text not in KEY_MAP:
                     valid = False
                     break
                 code, state = KEY_MAP[code_text]
                 keyStates.append((code, state | state_union))
-            if not keyStates:
+            if not keyStates or (len(keyStates) > 1 and contains_up_stroke):
                 valid = False
             if not valid:
                 break
             chords_data.append(keyStates)
         if not valid or not chords_data:
-            raise AssertionError('Invalid filter text: ' + self.filter_text)
+            raise AssertionError('Invalid filter: ' + self.filter_text)
 
         raw_chords_count = len(chords_data)
         raw_chords = (SUPERKEYS_CHORD * raw_chords_count)()
