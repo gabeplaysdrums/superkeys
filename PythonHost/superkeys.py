@@ -91,6 +91,10 @@ KEY_MAP = dict((
     ('F8',          (66, INTERCEPTION_KEY_DOWN)),
     ('F9',          (67, INTERCEPTION_KEY_DOWN)),
     ('F10',         (68, INTERCEPTION_KEY_DOWN)),
+    ('UpArrow',     (72, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
+    ('LeftArrow',   (75, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
+    ('RightArrow',  (77, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
+    ('DownArrow',   (80, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
     ('F11',         (87, INTERCEPTION_KEY_DOWN)),
     ('F12',         (88, INTERCEPTION_KEY_DOWN)),
     ('LeftWin',     (91, INTERCEPTION_KEY_DOWN | INTERCEPTION_KEY_E0)),
@@ -153,3 +157,5 @@ class SuperKeysFilterContext:
                 print('simulating up strokes')
                 for code, state in reversed(keyStates):
                     lib.SuperKeys_Send(self._filterContext, code, state | INTERCEPTION_KEY_UP)
+                    import time
+                    time.sleep(0.001)
