@@ -8,7 +8,7 @@ using namespace SuperKeys;
 
 int main()
 {
-	SuperKeysEngine engine;
+	Engine engine;
 
 	engine.Run();
 

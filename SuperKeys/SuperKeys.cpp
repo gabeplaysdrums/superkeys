@@ -26,7 +26,8 @@ namespace SuperKeys
 {
 	namespace Details
 	{
-		typedef vector<SuperKeysKeyState> Chord;
+#if 0
+		typedef vector<SuperKeys_KeyStroke> Chord;
 
 		struct Filter
 		{
@@ -72,28 +73,31 @@ namespace SuperKeys
 			InterceptionKeyStroke m_baseStroke;
 			bool m_cancel = false;
 		};
+#endif
 
-		class Context sealed
+		class EngineContext sealed
 		{
 		public:
-			Context()
+			EngineContext()
 			{
 				m_interception = interception_create_context();
 				DEBUG_OUTPUT("interception_create_context() -> " << m_interception);
 			}
 
-			~Context()
+			~EngineContext()
 			{
 				DEBUG_OUTPUT("interception_destroy_context(" << m_interception << ")");
 				interception_destroy_context(m_interception);
 			}
 
+#if 0
 			int AddFilter(Filter&& filter)
 			{
 				int id = m_nextFilterId++;
 				m_filters[id] = std::move(filter);
 				return id;
 			}
+#endif
 
 			void Run()
 			{
@@ -105,6 +109,8 @@ namespace SuperKeys
 				while (interception_receive(m_interception, device = interception_wait(m_interception), (InterceptionStroke*)&stroke, 1) > 0)
 				{
 					DEBUG_OUTPUT("recv << device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
+
+#if 0
 
 					if (m_currentState.find(stroke.code) == m_currentState.end())
 					{
@@ -197,7 +203,9 @@ namespace SuperKeys
 						canceled = true;
 					}
 
+
 					if (!canceled)
+#endif
 					{
 						DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
 						interception_send(m_interception, device, (InterceptionStroke*)&stroke, 1);
@@ -207,6 +215,7 @@ namespace SuperKeys
 
 		private:
 			InterceptionContext m_interception;
+#if 0
 			int m_nextFilterId = 0;
 			map<int, Filter> m_filters;
 
@@ -217,6 +226,7 @@ namespace SuperKeys
 			};
 
 			map<unsigned short, KnownKeyState> m_currentState;
+#endif
 		};
 	}
 }
@@ -224,18 +234,19 @@ namespace SuperKeys
 using namespace SuperKeys;
 using namespace SuperKeys::Details;
 
-SuperKeysContext SUPERKEYS_API SuperKeys_CreateContext()
+SuperKeys_EngineContext SUPERKEYS_API SuperKeys_CreateEngineContext()
 {
-	auto context = make_unique<Context>();
+	auto context = make_unique<EngineContext>();
 	return context.release();
 }
 
-void SUPERKEYS_API SuperKeys_DestroyContext(SuperKeysContext context)
+void SUPERKEYS_API SuperKeys_DestroyEngineContext(SuperKeys_EngineContext context)
 {
-	unique_ptr<Context> deleter((Context*)context);
+	unique_ptr<EngineContext> deleter((EngineContext*)context);
 }
 
-int SUPERKEYS_API SuperKeys_AddFilter(SuperKeysContext context, const SuperKeysChord* chords, int nChords, SuperKeysFilterCallback callback)
+#if 0
+int SUPERKEYS_API SuperKeys_AddFilter(SuperKeys_EngineContext context, const SuperKeys_Action* chords, int nChords, SuperKeysFilterCallback callback)
 {
 	Filter filter;
 
@@ -253,14 +264,18 @@ int SUPERKEYS_API SuperKeys_AddFilter(SuperKeysContext context, const SuperKeysC
 	
 	filter.callback = callback;
 
-	return ((Context*)context)->AddFilter(std::move(filter));
+	return ((EngineContext*)context)->AddFilter(std::move(filter));
 }
+#endif
 
-void SUPERKEYS_API SuperKeys_Run(SuperKeysContext context)
+
+
+void SUPERKEYS_API SuperKeys_Run(SuperKeys_EngineContext context)
 {
-	((Context*)context)->Run();
+	((EngineContext*)context)->Run();
 }
 
+#if 0
 void SUPERKEYS_API SuperKeys_Cancel(SuperKeysFilterContext context)
 {
 	((FilterContext*)context)->Cancel();
@@ -269,4 +284,32 @@ void SUPERKEYS_API SuperKeys_Cancel(SuperKeysFilterContext context)
 void SUPERKEYS_API SuperKeys_Send(SuperKeysFilterContext context, unsigned short code, unsigned short state)
 {
 	((FilterContext*)context)->Send(code, state);
+}
+#endif
+
+SuperKeys_LayerId SuperKeys_AddLayer(
+	SuperKeys_EngineContext context, 
+	const SuperKeys_KeyStroke* stroke)
+{
+	//TODO: implement
+	return SUPERKEYS_LAYER_ID_NONE;
+}
+
+SuperKeys_RuleId SUPERKEYS_API SuperKeys_AddRule(
+	SuperKeys_EngineContext context, 
+	SuperKeys_LayerId layer, 
+	const SuperKeys_KeyStroke* filter, 
+	const SuperKeys_Action* actions, 
+	int nActions)
+{
+	//TODO: implement
+	return 0;
+}
+
+void SUPERKEYS_API SuperKeys_Send(
+	SuperKeys_ActionContext context, 
+	const SuperKeys_KeyStroke* strokes, 
+	int nStrokes)
+{
+	//TODO: implement
 }
