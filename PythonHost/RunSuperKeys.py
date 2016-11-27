@@ -42,6 +42,7 @@ def parse_command_line():
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
+"""
 SUPERKEYS_FILTER_CALLBACK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p)
 SUPERKEYS_MAX_CHORD_CODE_COUNT = 8
 
@@ -127,19 +128,21 @@ class SuperKeysFilter:
                 raw_chords[i].keyStates[j].state = ctypes.c_ushort(state)
 
         return raw_chords, raw_chords_count
-
+"""
 
 class SuperKeysEngine:
     def __init__(self):
-        self.context = superkeys.lib.SuperKeys_CreateContext();
-        self.filters = dict()
+        self.context = superkeys.lib.SuperKeys_CreateEngineContext();
+        #self.filters = dict()
 
     def __del__(self):
-        superkeys.lib.SuperKeys_DestroyContext(self.context)
+        superkeys.lib.SuperKeys_DestroyEngineContext(self.context)
 
+    """
     def add_filter(self, filter):
         raw_chords, raw_chords_count = filter.make_raw()
         superkeys.lib.SuperKeys_AddFilter(self.context, ctypes.byref(raw_chords), ctypes.c_int(raw_chords_count), filter.raw_callback_func)
+    """
 
     def run(self):
         superkeys.lib.SuperKeys_Run(self.context);
@@ -153,8 +156,10 @@ if __name__ == '__main__':
 
     engine = SuperKeysEngine()
 
+    """
     for filter_text, action in config.SUPERKEYS.items():
         f = SuperKeysFilter(filter_text, action)
         engine.add_filter(f)
+    """
 
     engine.run()

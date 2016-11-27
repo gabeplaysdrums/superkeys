@@ -268,8 +268,6 @@ int SUPERKEYS_API SuperKeys_AddFilter(SuperKeys_EngineContext context, const Sup
 }
 #endif
 
-
-
 void SUPERKEYS_API SuperKeys_Run(SuperKeys_EngineContext context)
 {
 	((EngineContext*)context)->Run();
