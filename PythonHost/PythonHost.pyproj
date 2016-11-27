@@ -14,6 +14,7 @@
     <RootNamespace>PythonHost</RootNamespace>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <CommandLineArguments>Example.py</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -24,7 +25,13 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Example.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="RunSuperKeys.py" />
+    <Compile Include="superkeys.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SuperKeys\SuperKeys.vcxproj">
@@ -44,6 +51,7 @@
        the BeforeBuild and AfterBuild targets below. -->
   <!--<Target Name="CoreCompile" />-->
   <Target Name="BeforeBuild">
+    <Message Text="BeforeBuild message!" />
   </Target>
   <Target Name="AfterBuild">
   </Target>
