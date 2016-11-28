@@ -172,7 +172,7 @@ if __name__ == '__main__':
 
     raw_config = SuperKeys_EngineConfig()
     ActionList.parse_stroke(getattr(config, 'FUNCTION_KEY', 'CapsLock'), raw_config.fnKey, allow_single_direction=False)
-    ActionList.parse_stroke(getattr(config, 'LAYER_LOCK_ENABLED_INDICATOR', 'CapsLock'), raw_config.layerLockIndicator, allow_single_direction=False)
+    ActionList.parse_stroke(getattr(config, 'LAYER_LOCK_ENABLED_INDICATOR', None), raw_config.layerLockIndicator, allow_single_direction=False)
 
     engine = SuperKeysEngine(raw_config)
 

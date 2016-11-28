@@ -117,6 +117,34 @@ namespace SuperKeys
 
 			using clock = std::chrono::high_resolution_clock;
 
+			void SetLockedLayer(SuperKeys_LayerId layer, InterceptionDevice device, const InterceptionKeyStroke& stroke)
+			{
+				if (layer != m_lockedLayer)
+				{
+					m_lockedLayer = layer;
+
+					if (layer == SUPERKEYS_LAYER_ID_NONE)
+					{
+						DEBUG_OUTPUT("Layer lock canceled");
+					}
+					else
+					{
+						DEBUG_OUTPUT("Function layer lock activated");
+					}
+
+					if (m_config.layerLockIndicator.code != 0)
+					{
+						// send indicator key strokes
+						InterceptionKeyStroke strokes[] = { stroke, stroke };
+						strokes[0].code = strokes[1].code = m_config.layerLockIndicator.code;
+						strokes[0].state = strokes[1].state = m_config.layerLockIndicator.state;
+						strokes[1].state |= INTERCEPTION_KEY_UP;
+
+						interception_send(m_interception, device, (InterceptionStroke*)&strokes, 2);
+					}
+				}
+			}
+
 			void Run()
 			{
 				InterceptionDevice device;
@@ -127,7 +155,6 @@ namespace SuperKeys
 				unsigned short fnKeyConsecutiveToggleCount = 0;
 				clock::time_point fnKeyConsecutiveToggleTime;
 				const auto fnKeyConsecutiveToggleTimeout = chrono::milliseconds(500);
-				SuperKeys_LayerId lockedLayer = SUPERKEYS_LAYER_ID_NONE;
 
 				interception_set_filter(m_interception, interception_is_keyboard, INTERCEPTION_FILTER_KEY_ALL);
 
@@ -157,13 +184,11 @@ namespace SuperKeys
 
 							if (fnKeyConsecutiveToggleCount == 1)
 							{
-								DEBUG_OUTPUT("Layer lock canceled");
-								lockedLayer = SUPERKEYS_LAYER_ID_NONE;
+								SetLockedLayer(SUPERKEYS_LAYER_ID_NONE, device, stroke);
 							}
 							else if (fnKeyConsecutiveToggleCount == 2)
 							{
-								DEBUG_OUTPUT("Function layer lock activated");
-								lockedLayer = SUPERKEYS_LAYER_ID_FUNCTION;
+								SetLockedLayer(SUPERKEYS_LAYER_ID_FUNCTION, device, stroke);
 							}
 						}
 
@@ -172,7 +197,7 @@ namespace SuperKeys
 					else
 					{
 						fnKeyConsecutiveToggleCount = 0;
-						SuperKeys_LayerId layer = lockedLayer;
+						SuperKeys_LayerId layer = m_lockedLayer;
 
 						if ((fnKeyState & INTERCEPTION_KEY_UP) == 0)
 						{
@@ -429,6 +454,7 @@ namespace SuperKeys
 			typedef map<unsigned short /*code*/, vector<Rule> /*rules*/> RuleMap;
 
 			std::map<SuperKeys_LayerId, RuleMap> m_layers = { { SUPERKEYS_LAYER_ID_FUNCTION, RuleMap() } };
+			SuperKeys_LayerId m_lockedLayer = SUPERKEYS_LAYER_ID_NONE;
 
 #if 0
 			int m_nextFilterId = 0;

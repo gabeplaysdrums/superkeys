@@ -6,7 +6,7 @@ FUNCTION_KEY = 'RightWin'
 # Possible values are CapsLock, ScrollLock, NumLock
 # The key you use as the indicator will no longer be usable as a rule target 
 # (e.g. you cannot specify rule 'x': 'CapsLock' in layer actions if CapsLock is the indicator key)
-LAYER_LOCK_ENABLED_INDICATOR = 'CapsLock'
+LAYER_LOCK_ENABLED_INDICATOR = 'NumLock'
 
 def func1(context):
     pass
@@ -20,7 +20,7 @@ FUNCTION_LAYER_ACTIONS = {
     # trigger when LeftShift state changes to down (does not re-trigger on key repeat)
     '+LeftShift': 'LeftCtrl + C', 
     # trigger when LeftShift state changes to up
-    '-LeftShift': ('RightCtrl + V', 'Enter'),
+    '-LeftShift': ('End', 'Enter', 'RightCtrl + V'),
 
     # callback functions should be triggered on down transition except in special circumstances
     '+Enter': func1,

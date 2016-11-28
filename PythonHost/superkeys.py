@@ -231,6 +231,11 @@ class ActionList:
 
     @staticmethod
     def parse_stroke(value, raw_stroke, allow_single_direction=True):
+        if not value:
+            raw_stroke.code = 0
+            raw_stroke.state = 0
+            raw_stroke.mask = 0
+            return
         raw_stroke.mask = ~0x1
         raw_stroke.state = 0
         if allow_single_direction and (value[0] == '-' or value[0] == '+'):
