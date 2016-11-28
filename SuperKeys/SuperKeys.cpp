@@ -10,6 +10,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <chrono>
 using namespace std;
 
 #define ENABLE_DEBUG_OUTPUT 1
@@ -81,7 +82,8 @@ namespace SuperKeys
 		};
 #endif
 
-		static bool AreStrokesEqual(const SuperKeys_KeyStroke& lhs, const SuperKeys_KeyStroke& rhs, unsigned short mask)
+		template<typename TLeft = SuperKeys_KeyStroke>
+		static bool AreStrokesEqual(const TLeft& lhs, const SuperKeys_KeyStroke& rhs, unsigned short mask)
 		{
 			return (
 				lhs.code == rhs.code &&
@@ -113,10 +115,18 @@ namespace SuperKeys
 			}
 #endif
 
+			using clock = std::chrono::high_resolution_clock;
+
 			void Run()
 			{
 				InterceptionDevice device;
 				InterceptionKeyStroke stroke;
+				InterceptionKeyStroke prevStroke;
+				unsigned short fnKeyState = 0;
+				unsigned short fnKeyConsecutiveToggleCount = 0;
+				clock::time_point fnKeyConsecutiveToggleTime;
+				const auto fnKeyConsecutiveToggleTimeout = chrono::milliseconds(500);
+				SuperKeys_LayerId lockedLayer = SUPERKEYS_LAYER_ID_NONE;
 
 				interception_set_filter(m_interception, interception_is_keyboard, INTERCEPTION_FILTER_KEY_ALL);
 
@@ -124,6 +134,37 @@ namespace SuperKeys
 				{
 					DEBUG_OUTPUT("recv << device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
 
+					bool cancelStroke = false;
+
+					if (AreStrokesEqual(stroke, m_config.fnKey, ~0x1))
+					{
+						DEBUG_OUTPUT("FN key " << (((stroke.state & INTERCEPTION_KEY_UP) != 0) ? "up" : "down"));
+						cancelStroke = true;
+
+						if (AreStrokesEqual(prevStroke, m_config.fnKey, ~0x1) && (stroke.state & INTERCEPTION_KEY_UP) != 0)
+						{
+							auto now = clock::now();
+							// do not count toggles that are not recent
+							if ((now - fnKeyConsecutiveToggleTime) > fnKeyConsecutiveToggleTimeout)
+							{
+								fnKeyConsecutiveToggleCount = 0;
+							}
+
+							fnKeyConsecutiveToggleCount++;
+							fnKeyConsecutiveToggleTime = now;
+							DEBUG_OUTPUT("FN key toggled " << fnKeyConsecutiveToggleCount << " consecutive times");
+						}
+
+						fnKeyState = stroke.state;
+					}
+					else
+					{
+						fnKeyConsecutiveToggleCount = 0;
+					}
+
+					prevStroke = stroke;
+
+					if (!cancelStroke)
 #if 0
 
 					if (m_currentState.find(stroke.code) == m_currentState.end())
