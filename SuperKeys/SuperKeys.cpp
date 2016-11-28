@@ -153,6 +153,17 @@ namespace SuperKeys
 							fnKeyConsecutiveToggleCount++;
 							fnKeyConsecutiveToggleTime = now;
 							DEBUG_OUTPUT("FN key toggled " << fnKeyConsecutiveToggleCount << " consecutive times");
+
+							if (fnKeyConsecutiveToggleCount == 1)
+							{
+								DEBUG_OUTPUT("Layer lock canceled");
+								lockedLayer = SUPERKEYS_LAYER_ID_NONE;
+							}
+							else if (fnKeyConsecutiveToggleCount == 2)
+							{
+								DEBUG_OUTPUT("Function layer lock activated");
+								lockedLayer = SUPERKEYS_LAYER_ID_FUNCTION;
+							}
 						}
 
 						fnKeyState = stroke.state;
@@ -160,6 +171,13 @@ namespace SuperKeys
 					else
 					{
 						fnKeyConsecutiveToggleCount = 0;
+
+						// check if function layer is active
+						if ((fnKeyState & INTERCEPTION_KEY_UP) == 0 || lockedLayer != SUPERKEYS_LAYER_ID_NONE)
+						{
+							// if function layer is active, disable pass through
+							cancelStroke = true;
+						}
 					}
 
 					prevStroke = stroke;
