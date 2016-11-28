@@ -122,7 +122,8 @@ namespace SuperKeys
 				InterceptionDevice device;
 				InterceptionKeyStroke stroke;
 				InterceptionKeyStroke prevStroke;
-				unsigned short fnKeyState = 0;
+
+				unsigned short fnKeyState = INTERCEPTION_KEY_UP;
 				unsigned short fnKeyConsecutiveToggleCount = 0;
 				clock::time_point fnKeyConsecutiveToggleTime;
 				const auto fnKeyConsecutiveToggleTimeout = chrono::milliseconds(500);
@@ -171,12 +172,45 @@ namespace SuperKeys
 					else
 					{
 						fnKeyConsecutiveToggleCount = 0;
+						SuperKeys_LayerId layer = lockedLayer;
 
-						// check if function layer is active
-						if ((fnKeyState & INTERCEPTION_KEY_UP) == 0 || lockedLayer != SUPERKEYS_LAYER_ID_NONE)
+						if ((fnKeyState & INTERCEPTION_KEY_UP) == 0)
 						{
-							// if function layer is active, disable pass through
+							layer = SUPERKEYS_LAYER_ID_FUNCTION;
+						}
+
+						// if a layer is active, disable pass through
+						if (layer != SUPERKEYS_LAYER_ID_NONE)
+						{
 							cancelStroke = true;
+						}
+
+						auto layerEntry = m_layers.find(layer);
+
+						if (layerEntry != m_layers.end())
+						{
+							auto ruleMapEntry = layerEntry->second.find(stroke.code);
+
+							if (ruleMapEntry != layerEntry->second.end())
+							{
+								for (const auto& rule : ruleMapEntry->second)
+								{
+									if ((rule.state & rule.mask) == (stroke.state & rule.mask))
+									{
+										// if the rule filter is an explicit down, suppress sends when the state has not changed
+										bool cancelSend = (
+											(rule.mask & 0x1) != 0 && 
+											(rule.state & 0x1) == 0 &&
+											prevStroke.code == ruleMapEntry->first && 
+											(rule.state & rule.mask) == (prevStroke.state & rule.mask));
+
+										if (!cancelSend)
+										{
+											Send(rule.actions, device, stroke);
+										}
+									}
+								}
+							}
 						}
 					}
 
@@ -325,6 +359,58 @@ namespace SuperKeys
 				layerEntry->second[filter.code].push_back(std::move(rule));
 
 				return m_nextRuleId++;
+			}
+
+			void Send(const vector<SuperKeys_Action>& actions, InterceptionDevice device, const InterceptionKeyStroke& stroke)
+			{
+				DEBUG_OUTPUT("Sending rule actions");
+
+				for (const auto& action : actions)
+				{
+					if (action.callback)
+					{
+						//TODO: execute callback
+					}
+					else
+					{
+						vector<InterceptionKeyStroke> strokes;
+
+						// if there is only one stroke in this action and there is one action in the sequence, base the state on the current stroke
+						if (action.nStrokes == 1 && actions.size() == 1)
+						{
+							strokes.push_back(stroke);
+							strokes.back().code = action.strokes[0].code;
+							strokes.back().state = stroke.state & ~action.strokes[0].mask;
+							strokes.back().state |= action.strokes[0].state & action.strokes[0].mask;
+						}
+						// otherwise this is a chord or an action sequence, send down strokes followed by up strokes
+						else
+						{
+							for (int i = 0; i < action.nStrokes; i++)
+							{
+								strokes.push_back(stroke);
+								strokes.back().code = action.strokes[i].code;
+								strokes.back().state = action.strokes[i].state & action.strokes[i].mask;
+								strokes.back().state &= ~INTERCEPTION_KEY_UP;
+							}
+
+							for (int i = action.nStrokes - 1; i >= 0; i--)
+							{
+								strokes.push_back(stroke);
+								strokes.back().code = action.strokes[i].code;
+								strokes.back().state = action.strokes[i].state & action.strokes[i].mask;
+								strokes.back().state |= INTERCEPTION_KEY_UP;
+							}
+						}
+
+						for (const auto& sendStroke : strokes)
+						{
+							DEBUG_OUTPUT("send >> device: " << device << ", code: " << sendStroke.code << ", state: " << sendStroke.state);
+						}
+
+						interception_send(m_interception, device, (InterceptionStroke*)&strokes.front(), strokes.size());
+					}
+				}
 			}
 
 		private:

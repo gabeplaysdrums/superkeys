@@ -109,6 +109,7 @@ extern "C" {
 		int nActions);
 
 	//!\param Send a key stroke in an action callback
+	//TODO: this should probably take actions instead of individual key strokes
 	void SUPERKEYS_API SuperKeys_Send(
 		SuperKeys_ActionContext context, 
 		const SuperKeys_KeyStroke* strokes, 

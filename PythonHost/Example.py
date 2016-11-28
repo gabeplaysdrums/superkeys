@@ -17,13 +17,18 @@ FUNCTION_LAYER_ACTIONS = {
     'k': 'DownArrow',
     'l': 'RightArrow',
 
+    # trigger when LeftShift state changes to down (does not re-trigger on key repeat)
     '+LeftShift': 'LeftCtrl + C', 
+    # trigger when LeftShift state changes to up
     '-LeftShift': ('RightCtrl + V', 'Enter'),
 
-    'Enter': func1,
+    # callback functions should be triggered on down transition except in special circumstances
+    '+Enter': func1,
 
-    'CapsLock': func1,
-    'a': ('x', 'CapsLock'),
+    '+CapsLock': func1,
+    #'a': ('x', 'CapsLock'),
+    '/': 'LeftShift',
+    'd': 'd',
 }
 
 """
