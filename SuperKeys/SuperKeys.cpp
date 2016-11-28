@@ -12,7 +12,7 @@
 #include <vector>
 using namespace std;
 
-#define ENABLE_DEBUG_OUTPUT 0
+#define ENABLE_DEBUG_OUTPUT 1
 
 #if ENABLE_DEBUG_OUTPUT
 #define DEBUG_OUTPUT(...) \
@@ -81,10 +81,18 @@ namespace SuperKeys
 		};
 #endif
 
+		static bool AreStrokesEqual(const SuperKeys_KeyStroke& lhs, const SuperKeys_KeyStroke& rhs, unsigned short mask)
+		{
+			return (
+				lhs.code == rhs.code &&
+				(lhs.state & mask) == (rhs.state & mask));
+		}
+
 		class EngineContext sealed
 		{
 		public:
-			EngineContext()
+			EngineContext(const SuperKeys_EngineConfig& config) :
+				m_config(config)
 			{
 				m_interception = interception_create_context();
 				DEBUG_OUTPUT("interception_create_context() -> " << m_interception);
@@ -219,8 +227,64 @@ namespace SuperKeys
 				}
 			}
 
+			SuperKeys_RuleId AddRule(
+				SuperKeys_LayerId layer,
+				const SuperKeys_KeyStroke& filter,
+				vector<SuperKeys_Action>&& actions)
+			{
+				auto layerEntry = m_layers.find(layer);
+				bool valid = (layerEntry != m_layers.end() && !AreStrokesEqual(filter, m_config.fnKey, ~0x1));
+
+				for (const auto& action : actions)
+				{
+					for (size_t i = 0; i < action.nStrokes; i++)
+					{
+						if (AreStrokesEqual(action.strokes[i], m_config.layerLockIndicator, ~0x1))
+						{
+							valid = false;
+							break;
+						}
+					}
+
+					if (!valid)
+					{
+						break;
+					}
+				}
+
+				if (!valid)
+				{
+					DEBUG_OUTPUT("Ignoring invalid rule");
+					return 0;
+				}
+
+				Rule rule;
+				rule.id = m_nextRuleId;
+				rule.state = filter.state;
+				rule.mask = filter.mask;
+				rule.actions = std::move(actions);
+				layerEntry->second[filter.code].push_back(std::move(rule));
+
+				return m_nextRuleId++;
+			}
+
 		private:
 			InterceptionContext m_interception;
+			SuperKeys_EngineConfig m_config;
+			SuperKeys_RuleId m_nextRuleId = 1;
+
+			struct Rule
+			{
+				SuperKeys_RuleId id;
+				unsigned short state;
+				unsigned short mask;
+				vector<SuperKeys_Action> actions;
+			};
+
+			typedef map<unsigned short /*code*/, vector<Rule> /*rules*/> RuleMap;
+
+			std::map<SuperKeys_LayerId, RuleMap> m_layers = { { SUPERKEYS_LAYER_ID_FUNCTION, RuleMap() } };
+
 #if 0
 			int m_nextFilterId = 0;
 			map<int, Filter> m_filters;
@@ -240,9 +304,9 @@ namespace SuperKeys
 using namespace SuperKeys;
 using namespace SuperKeys::Details;
 
-SuperKeys_EngineContext SUPERKEYS_API SuperKeys_CreateEngineContext()
+SuperKeys_EngineContext SUPERKEYS_API SuperKeys_CreateEngineContext(const SuperKeys_EngineConfig* config)
 {
-	auto context = make_unique<EngineContext>();
+	auto context = make_unique<EngineContext>(*config);
 	return context.release();
 }
 
@@ -306,8 +370,8 @@ SuperKeys_RuleId SUPERKEYS_API SuperKeys_AddRule(
 	const SuperKeys_Action* actions, 
 	int nActions)
 {
-	//TODO: implement
-	return 0;
+	vector<SuperKeys_Action> actionsVect(actions, actions + nActions);
+	return ((EngineContext*)context)->AddRule(layer, *filter, std::move(actionsVect));
 }
 
 void SUPERKEYS_API SuperKeys_Send(

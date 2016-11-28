@@ -38,17 +38,6 @@ extern "C" {
 #define SUPERKEYS_LAYER_ID_NONE (0)
 #define SUPERKEYS_LAYER_ID_FUNCTION (1)
 
-	typedef void* SuperKeys_EngineContext;
-
-	//! Create an engine context.  Free with SuperKeys_DestroyEngineContext
-	SuperKeys_EngineContext SUPERKEYS_API SuperKeys_CreateEngineContext();
-
-	//! Destroy engine context
-	void SUPERKEYS_API SuperKeys_DestroyEngineContext(SuperKeys_EngineContext context);
-
-	//! Run engine processing loop
-	void SUPERKEYS_API SuperKeys_Run(SuperKeys_EngineContext context);
-
 	//! Defines a keystroke in filter or action
 	typedef struct
 	{
@@ -62,6 +51,23 @@ extern "C" {
 		//! - ~0x3 => normal and E0 variants, both up and down stroke
 		unsigned short mask;
 	} SuperKeys_KeyStroke;
+
+	typedef struct
+	{
+		SuperKeys_KeyStroke fnKey;
+		SuperKeys_KeyStroke layerLockIndicator;
+	} SuperKeys_EngineConfig;
+
+	typedef void* SuperKeys_EngineContext;
+
+	//! Create an engine context.  Free with SuperKeys_DestroyEngineContext
+	SuperKeys_EngineContext SUPERKEYS_API SuperKeys_CreateEngineContext(const SuperKeys_EngineConfig* config);
+
+	//! Destroy engine context
+	void SUPERKEYS_API SuperKeys_DestroyEngineContext(SuperKeys_EngineContext context);
+
+	//! Run engine processing loop
+	void SUPERKEYS_API SuperKeys_Run(SuperKeys_EngineContext context);
 
 	typedef void* SuperKeys_ActionContext;
 
@@ -117,7 +123,7 @@ namespace SuperKeys
 	{
 	public:
 		Engine() :
-			m_context(SuperKeys_CreateEngineContext(), &SuperKeys_DestroyEngineContext)
+			m_context(SuperKeys_CreateEngineContext(&SuperKeys_EngineConfig()), &SuperKeys_DestroyEngineContext)
 		{}
 
 		void Run() { SuperKeys_Run(m_context.get()); }

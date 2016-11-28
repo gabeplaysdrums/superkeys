@@ -1,5 +1,13 @@
 import superkeys
 
+FUNCTION_KEY = 'CapsLock'
+
+# Use a status light on the keyboard to indicate that a layer lock is enabled. 
+# Possible values are CapsLock, ScrollLock, NumLock
+# The key you use as the indicator will no longer be usable as a rule target 
+# (e.g. you cannot specify rule 'x': 'CapsLock' in layer actions if CapsLock is the indicator key)
+LAYER_LOCK_ENABLED_INDICATOR = 'CapsLock'
+
 def func1(context):
     pass
 
@@ -13,6 +21,9 @@ FUNCTION_LAYER_ACTIONS = {
     '-LeftShift': ('RightCtrl + V', 'Enter'),
 
     'Enter': func1,
+
+    'CapsLock': func1,
+    'a': ('x', 'CapsLock'),
 }
 
 """

@@ -132,9 +132,15 @@ class SuperKeysFilter:
 
 SUPERKEYS_LAYER_ID_FUNCTION = 1
 
+class SuperKeys_EngineConfig(ctypes.Structure):
+    _fields_ = (
+        ('fnKey', SuperKeys_KeyStroke),
+        ('layerLockIndicator', SuperKeys_KeyStroke),
+    )
+
 class SuperKeysEngine:
-    def __init__(self):
-        self.context = superkeys.lib.SuperKeys_CreateEngineContext();
+    def __init__(self, raw_config):
+        self.context = superkeys.lib.SuperKeys_CreateEngineContext(ctypes.byref(raw_config));
         #self.filters = dict()
 
     def __del__(self):
@@ -147,7 +153,7 @@ class SuperKeysEngine:
     """
 
     def add_rule(self, layer, filter_stroke, action_list):
-        rule_id = superkeys.lib.SuperKeys_AddRule(
+        return superkeys.lib.SuperKeys_AddRule(
             self.context,
             layer,
             ctypes.byref(filter_stroke),
@@ -164,12 +170,18 @@ if __name__ == '__main__':
 
     superkeys.lib = ctypes.CDLL(os.path.join(SCRIPT_DIR, 'SuperKeys.dll'))
 
-    engine = SuperKeysEngine()
+    raw_config = SuperKeys_EngineConfig()
+    ActionList.parse_stroke(getattr(config, 'FUNCTION_KEY', 'CapsLock'), raw_config.fnKey, allow_single_direction=False)
+    ActionList.parse_stroke(getattr(config, 'LAYER_LOCK_ENABLED_INDICATOR', 'CapsLock'), raw_config.layerLockIndicator, allow_single_direction=False)
 
-    for filter_text, action in config.FUNCTION_LAYER_ACTIONS.items():
+    engine = SuperKeysEngine(raw_config)
+
+    for filter_text, action in getattr(config, 'FUNCTION_LAYER_ACTIONS', {}).items():
         filter_stroke = SuperKeys_KeyStroke()
         ActionList.parse_stroke(filter_text, filter_stroke)
         action_list = ActionList(action)
-        engine.add_rule(SUPERKEYS_LAYER_ID_FUNCTION, filter_stroke, action_list)
+        rule_id = engine.add_rule(SUPERKEYS_LAYER_ID_FUNCTION, filter_stroke, action_list)
+        if rule_id == 0:
+            print('Invalid rule: %s : %s' % (repr(filter_text), repr(action)))
 
     engine.run()
