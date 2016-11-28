@@ -130,6 +130,8 @@ class SuperKeysFilter:
         return raw_chords, raw_chords_count
 """
 
+SUPERKEYS_LAYER_ID_FUNCTION = 1
+
 class SuperKeysEngine:
     def __init__(self):
         self.context = superkeys.lib.SuperKeys_CreateEngineContext();
@@ -144,6 +146,14 @@ class SuperKeysEngine:
         superkeys.lib.SuperKeys_AddFilter(self.context, ctypes.byref(raw_chords), ctypes.c_int(raw_chords_count), filter.raw_callback_func)
     """
 
+    def add_rule(self, layer, filter_stroke, action_list):
+        rule_id = superkeys.lib.SuperKeys_AddRule(
+            self.context,
+            layer,
+            ctypes.byref(filter_stroke),
+            ctypes.byref(action_list.raw_array),
+            action_list.raw_count)
+
     def run(self):
         superkeys.lib.SuperKeys_Run(self.context);
 
@@ -156,10 +166,10 @@ if __name__ == '__main__':
 
     engine = SuperKeysEngine()
 
-    """
-    for filter_text, action in config.SUPERKEYS.items():
-        f = SuperKeysFilter(filter_text, action)
-        engine.add_filter(f)
-    """
+    for filter_text, action in config.FUNCTION_LAYER_ACTIONS.items():
+        filter_stroke = SuperKeys_KeyStroke()
+        ActionList.parse_stroke(filter_text, filter_stroke)
+        action_list = ActionList(action)
+        engine.add_rule(SUPERKEYS_LAYER_ID_FUNCTION, filter_stroke, action_list)
 
     engine.run()

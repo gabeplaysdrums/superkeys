@@ -1,5 +1,21 @@
 import superkeys
 
+def func1(context):
+    pass
+
+FUNCTION_LAYER_ACTIONS = {
+    'i': 'UpArrow', 
+    'j': 'LeftArrow',
+    'k': 'DownArrow',
+    'l': 'RightArrow',
+
+    '+LeftShift': 'LeftCtrl + C', 
+    '-LeftShift': ('RightCtrl + V', 'Enter'),
+
+    'Enter': func1,
+}
+
+"""
 window_nav_enabled = False
 desktop_nav_enabled = False
 nav_enabled = False
@@ -65,3 +81,4 @@ SUPERKEYS = {
     'LeftShift+Space': toggle_navigation,
     'RightWin': start_desktop_navigation,
 }
+"""

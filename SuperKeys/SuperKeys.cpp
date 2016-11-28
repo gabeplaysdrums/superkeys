@@ -12,6 +12,9 @@
 #include <vector>
 using namespace std;
 
+#define ENABLE_DEBUG_OUTPUT 0
+
+#if ENABLE_DEBUG_OUTPUT
 #define DEBUG_OUTPUT(...) \
 { \
 	cout << __VA_ARGS__ << endl; \
@@ -19,6 +22,9 @@ using namespace std;
 	oss << __VA_ARGS__ << endl; \
 	OutputDebugStringA(oss.str().c_str()); \
 }
+#else
+#define DEBUG_OUTPUT(...)
+#endif
 
 #define DEBUG_FILTER_MATCHING 0
 

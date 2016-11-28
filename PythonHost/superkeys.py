@@ -1,5 +1,6 @@
 import ctypes
 import re
+import types
 
 lib = None
 
@@ -128,6 +129,7 @@ KEY_MAP = dict((
 #REVERSE_KEY_MAP = { v:k for k,v in KEY_MAP.items() }
 KEY_MAP = { k.lower():v for k,v in KEY_MAP.items() }
 
+"""
 class SuperKeysFilterContext:
     def __init__(self, filterContext):
         self._filterContext = filterContext
@@ -183,3 +185,70 @@ class SuperKeysFilterContext:
                     lib.SuperKeys_Send(self._filterContext, code, state | INTERCEPTION_KEY_UP)
                     import time
                     time.sleep(0.001)
+"""
+
+SUPERKEYS_ACTION_MAX_STROKE_COUNT = 8
+
+class SuperKeys_KeyStroke(ctypes.Structure):
+    _fields_ = (
+        ('code', ctypes.c_ushort),
+        ('state', ctypes.c_ushort),
+        ('mask', ctypes.c_ushort),
+    )
+
+SuperKeys_ActionCallback = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p)
+
+class SuperKeys_Action(ctypes.Structure):
+    _fields_ = (
+        ('nStrokes', ctypes.c_ushort),
+        ('strokes', SuperKeys_KeyStroke * SUPERKEYS_ACTION_MAX_STROKE_COUNT),
+        ('callback', SuperKeys_ActionCallback),
+    )
+
+class ActionList:
+    def __init__(self, value):
+        if callable(value):
+            self.raw_count = 1
+            self.raw_array = (SuperKeys_Action * 1)()
+            self.raw_array[0].nStrokes = 0
+            def raw_callback(raw_context):
+                #TODO: create context wrapper
+                context = None
+                pass
+                value(context)
+            self.raw_array[0].callback = SuperKeys_ActionCallback(raw_callback)
+        elif type(value) is str:
+            self.raw_count = 1
+            self.raw_array = (SuperKeys_Action * 1)()
+            ActionList._parse(value, self.raw_array[0])
+        else: # iterable of str
+            self.raw_count = len(value)
+            self.raw_array = (SuperKeys_Action * self.raw_count)()
+            for i in range(self.raw_count):
+                ActionList._parse(value[i], self.raw_array[i])
+
+    _stroke_delim = re.compile(r'\s*\+\s*')
+
+    @staticmethod
+    def parse_stroke(value, raw_stroke, allow_single_direction=True):
+        raw_stroke.mask = ~0x1
+        raw_stroke.state = 0
+        if allow_single_direction and (value[0] == '-' or value[0] == '+'):
+            raw_stroke.state = (INTERCEPTION_KEY_UP if value[0] == '-' else 0)
+            raw_stroke.mask = ~0x0
+            value = value[1:]
+        code, state = KEY_MAP[value.lower()]
+        raw_stroke.code = code
+        raw_stroke.state |= state
+
+    @staticmethod
+    def _parse(value, raw_action):
+        raw_action.callback = SuperKeys_ActionCallback()
+        if value[0] == '-' or value[0] == '+':
+            raw_action.nStrokes = 1
+            ActionList.parse_stroke(value, raw_action.strokes[0])
+            return
+        raw_action.nStrokes = 0
+        for stroke_text in filter(None, ActionList._stroke_delim.split(value)):
+            ActionList.parse_stroke(stroke_text, raw_action.strokes[raw_action.nStrokes], allow_single_direction=False)
+            raw_action.nStrokes += 1
