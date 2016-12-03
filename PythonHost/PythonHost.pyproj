@@ -13,7 +13,7 @@
     <Name>PythonHost</Name>
     <RootNamespace>PythonHost</RootNamespace>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <CommandLineArguments>Example.py</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
