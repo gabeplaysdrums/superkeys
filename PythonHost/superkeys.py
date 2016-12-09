@@ -1,6 +1,8 @@
 import ctypes
 import re
 import types
+import traceback
+import sys
 
 lib = None
 
@@ -205,18 +207,28 @@ class SuperKeys_Action(ctypes.Structure):
         ('callback', SuperKeys_ActionCallback),
     )
 
+class ActionContext:
+    def __init__(self, raw_context):
+        self._raw_context = raw_context
+
+    def send(self, *actions):
+        for action in actions:
+            if not type(action) == str:
+                raise ValueError()
+            raw_action = SuperKeys_Action()
+            ActionList._parse(action, raw_action)
+            if not lib.SuperKeys_Send(self._raw_context, raw_action.strokes, raw_action.nStrokes):
+                raise ValueError()
+
 class ActionList:
     def __init__(self, value):
         if callable(value):
             self.raw_count = 1
             self.raw_array = (SuperKeys_Action * 1)()
             self.raw_array[0].nStrokes = 0
-            def raw_callback(raw_context):
-                #TODO: create context wrapper
-                context = None
-                pass
-                value(context)
-            self.raw_array[0].callback = SuperKeys_ActionCallback(raw_callback)
+            self._callback = value;
+            self.raw_callback = SuperKeys_ActionCallback(self._callback_wrapper)
+            self.raw_array[0].callback = self.raw_callback
         elif type(value) is str:
             self.raw_count = 1
             self.raw_array = (SuperKeys_Action * 1)()
@@ -228,6 +240,16 @@ class ActionList:
                 ActionList._parse(value[i], self.raw_array[i])
 
     _stroke_delim = re.compile(r'\s*\+\s*')
+
+    def _callback_wrapper(self, raw_context):
+        context = ActionContext(raw_context)
+        try:
+            self._callback(context)
+        except:
+            print("Exception in user code:")
+            print('-'*60)
+            traceback.print_exc(file=sys.stderr)
+            print('-'*60)
 
     @staticmethod
     def parse_stroke(value, raw_stroke, allow_single_direction=True):

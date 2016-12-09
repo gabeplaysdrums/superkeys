@@ -1,15 +1,21 @@
 import superkeys
 
-FUNCTION_KEY = 'CapsLock'
+FUNCTION_KEY = 'RightWin'
 
 # Use a status light on the keyboard to indicate that a layer lock is enabled. 
 # Possible values are CapsLock, ScrollLock, NumLock
 # The key you use as the indicator will no longer be usable as a rule target 
 # (e.g. you cannot specify rule 'x': 'CapsLock' in layer actions if CapsLock is the indicator key)
-LAYER_LOCK_ENABLED_INDICATOR = 'CapsLock'
+LAYER_LOCK_ENABLED_INDICATOR = 'ScrollLock'
+
+import time
 
 def func1(context):
-    pass
+    context.send('h', 'e', 'l', 'l', 'o', 'Space')
+    for c in 'world':
+        context.send(c)
+        time.sleep(0.5)
+    raise AssertionError()
 
 FUNCTION_LAYER_ACTIONS = {
     'i': 'UpArrow', 
@@ -28,7 +34,7 @@ FUNCTION_LAYER_ACTIONS = {
     #'-LeftShift': ('End', 'Enter', 'LeftCtrl + V'),
 
     # callback functions should be triggered on down transition except in special circumstances
-    #'+Enter': func1,
+    '+Enter': func1,
 
     #'+CapsLock': func1,
     #'a': ('x', 'CapsLock'),

@@ -46,6 +46,85 @@ namespace SuperKeys
             return actions.size() > 0 && (actions.size() > 1 || (actions[0].nStrokes > 1 || actions[0].callback));
         }
 
+        static bool ComputeStrokes(
+            InterceptionContext interception,
+            _In_reads_(nStrokes) const SuperKeys_KeyStroke* strokes,
+            int nStrokes,
+            const InterceptionKeyStroke& strokeTemplate,
+            _Out_ vector<InterceptionKeyStroke>* rawStrokes)
+        {
+            // if there is only one stroke, it may have an explicit direction
+            // if there are multiple strokes, they cannot have explicit directions
+            const bool explicitDirectionAllowed = (nStrokes == 1);
+
+            for (int i = 0; i < nStrokes; i++)
+            {
+                rawStrokes->push_back(strokeTemplate);
+                rawStrokes->back().code = strokes[i].code;
+                rawStrokes->back().state = strokes[i].state & strokes[i].mask;
+
+                if ((strokes[i].mask & 0x1) != 0)
+                {
+                    if (!explicitDirectionAllowed)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    // no explicit direction given, simulate down strokes
+                    rawStrokes->back().state &= ~INTERCEPTION_KEY_UP;
+                }
+            }
+
+            // if no explicit direction given, simulate up strokes
+            if (nStrokes > 0 && (strokes[nStrokes].mask & 0x1) == 0)
+            {
+                for (int i = nStrokes - 1; i >= 0; i--)
+                {
+                    rawStrokes->push_back(strokeTemplate);
+                    rawStrokes->back().code = strokes[i].code;
+                    rawStrokes->back().state = strokes[i].state & strokes[i].mask;
+                    rawStrokes->back().state |= INTERCEPTION_KEY_UP;
+                }
+            }
+
+            return true;
+        }
+
+        class ActionContext sealed
+        {
+        public:
+            ActionContext(
+                InterceptionContext interception, 
+                InterceptionDevice device,
+                const InterceptionKeyStroke* strokeTemplate) :
+                m_interception(interception),
+                m_device(device),
+                m_strokeTemplate(strokeTemplate)
+            {}
+
+            bool Send(
+                const SuperKeys_KeyStroke* strokes,
+                int nStrokes) const
+            {
+                vector<InterceptionKeyStroke> rawStrokes;
+
+                if (!ComputeStrokes(m_interception, strokes, nStrokes, *m_strokeTemplate, &rawStrokes))
+                {
+                    return false;
+                }
+
+                interception_send(m_interception, m_device, (InterceptionStroke*)&rawStrokes.front(), rawStrokes.size());
+                return true;
+            }
+
+        private:
+            InterceptionContext m_interception;
+            InterceptionDevice m_device;
+            const InterceptionKeyStroke* m_strokeTemplate;
+        };
+
         class EngineContext sealed
         {
             using clock = std::chrono::high_resolution_clock;
@@ -246,7 +325,7 @@ namespace SuperKeys
                 return m_nextRuleId++;
             }
 
-            void Send(const vector<SuperKeys_Action>& actions, InterceptionDevice device, const InterceptionKeyStroke& stroke)
+            void Send(const vector<SuperKeys_Action>& actions, InterceptionDevice device, const InterceptionKeyStroke& strokeTemplate)
             {
                 DEBUG_OUTPUT("Sending rule actions");
 
@@ -254,41 +333,28 @@ namespace SuperKeys
                 {
                     if (action.callback)
                     {
-                        //TODO: execute callback
+                        ActionContext context(m_interception, device, &strokeTemplate);
+                        action.callback(&context);
                     }
                     else
                     {
-                        vector<InterceptionKeyStroke> strokes;
+                        vector<InterceptionKeyStroke> rawStrokes;
 
-                        // if there is only one stroke in this action and there is one action in the sequence, base the state on the current stroke
+                        // if there is only one strokeTemplate in this action and there is one action in the sequence, base the state on the current strokeTemplate
                         if (action.nStrokes == 1 && actions.size() == 1)
                         {
-                            strokes.push_back(stroke);
-                            strokes.back().code = action.strokes[0].code;
-                            strokes.back().state = stroke.state & ~action.strokes[0].mask;
-                            strokes.back().state |= action.strokes[0].state & action.strokes[0].mask;
+                            rawStrokes.push_back(strokeTemplate);
+                            rawStrokes.back().code = action.strokes[0].code;
+                            rawStrokes.back().state = strokeTemplate.state & ~action.strokes[0].mask;
+                            rawStrokes.back().state |= action.strokes[0].state & action.strokes[0].mask;
                         }
-                        // otherwise this is a chord or an action sequence, send down strokes followed by up strokes
+                        // otherwise this is a chord in an action sequence, send down strokes followed by up strokes
                         else
                         {
-                            for (int i = 0; i < action.nStrokes; i++)
-                            {
-                                strokes.push_back(stroke);
-                                strokes.back().code = action.strokes[i].code;
-                                strokes.back().state = action.strokes[i].state & action.strokes[i].mask;
-                                strokes.back().state &= ~INTERCEPTION_KEY_UP;
-                            }
-
-                            for (int i = action.nStrokes - 1; i >= 0; i--)
-                            {
-                                strokes.push_back(stroke);
-                                strokes.back().code = action.strokes[i].code;
-                                strokes.back().state = action.strokes[i].state & action.strokes[i].mask;
-                                strokes.back().state |= INTERCEPTION_KEY_UP;
-                            }
+                            ComputeStrokes(m_interception, action.strokes, action.nStrokes, strokeTemplate, &rawStrokes);
                         }
 
-                        interception_send(m_interception, device, (InterceptionStroke*)&strokes.front(), strokes.size());
+                        interception_send(m_interception, device, (InterceptionStroke*)&rawStrokes.front(), rawStrokes.size());
                     }
                 }
             }
@@ -352,10 +418,10 @@ SuperKeys_RuleId SUPERKEYS_API SuperKeys_AddRule(
     return ((EngineContext*)context)->AddRule(layer, *filter, std::move(actionsVect));
 }
 
-void SUPERKEYS_API SuperKeys_Send(
+bool SUPERKEYS_API SuperKeys_Send(
     SuperKeys_ActionContext context, 
     const SuperKeys_KeyStroke* strokes, 
     int nStrokes)
 {
-    //TODO: implement
+    return ((ActionContext*)context)->Send(strokes, nStrokes);
 }
