@@ -17,6 +17,12 @@ def func1(context):
         time.sleep(0.5)
     raise AssertionError()
 
+def type_down(context):
+    context.send('d', 'o', 'w', 'n', 'Space')
+
+def type_up(context):
+    context.send('u', 'p', 'Space')
+
 FUNCTION_LAYER_ACTIONS = {
     'i': 'UpArrow', 
     'j': 'LeftArrow',
@@ -33,21 +39,31 @@ FUNCTION_LAYER_ACTIONS = {
     # trigger when LeftShift state changes to up
     #'-LeftShift': ('End', 'Enter', 'LeftCtrl + V'),
 
-    # callback functions should be triggered on down transition except in special circumstances
-    '+Enter': func1,
-
     #'+CapsLock': func1,
     #'a': ('x', 'CapsLock'),
     'RightShift': 'LeftCtrl+LeftAlt+Tab',
     'LeftShift': 'LeftShift',
     'LeftCtrl': 'LeftCtrl',
     'LeftWin': 'LeftWin',
-    'c': 'LeftCtrl + c',
-    'v': 'LeftCtrl + v',
+    #'c': 'LeftCtrl + c',
+    #'v': 'LeftCtrl + v',
     'n': 'PageDown',
     'p': 'PageUp',
 
     #'d': 'd',
+
+    '5': 'F5',
+
+    # callback actions should be triggered on down transition except in special circumstances
+    '+Enter': func1,
+
+    # Invoke callback when z state changes to down (does not trigger on key repeat)
+    '+z': type_down,
+    # Invoke callback when z state changes to up
+    '-z': type_up,
+
+    # Invoke callback on every x key down stroke
+    'x': type_down,
 }
 
 """
