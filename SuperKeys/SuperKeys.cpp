@@ -13,7 +13,11 @@
 #include <chrono>
 using namespace std;
 
+#if _DEBUG
 #define ENABLE_DEBUG_OUTPUT 1
+#else
+#define ENABLE_DEBUG_OUTPUT 0
+#endif
 
 #if ENABLE_DEBUG_OUTPUT
 #define DEBUG_OUTPUT(...) \
@@ -26,8 +30,6 @@ using namespace std;
 #else
 #define DEBUG_OUTPUT(...)
 #endif
-
-#define DEBUG_FILTER_MATCHING 0
 
 namespace SuperKeys
 {
