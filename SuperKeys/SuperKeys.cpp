@@ -145,6 +145,7 @@ namespace SuperKeys
             {
                 m_interception = interception_create_context();
                 DEBUG_OUTPUT("interception_create_context() -> " << m_interception);
+                SetLockedLayer(SUPERKEYS_LAYER_ID_NONE);
             }
 
             ~EngineContext()
@@ -153,48 +154,45 @@ namespace SuperKeys
                 interception_destroy_context(m_interception);
             }
 
-            void SetLockedLayer(SuperKeys_LayerId layer, InterceptionDevice device, const InterceptionKeyStroke& stroke)
+            void SetLockedLayer(SuperKeys_LayerId layer)
             {
-                if (layer != m_lockedLayer)
-                {
-                    m_lockedLayer = layer;
+                m_lockedLayer = layer;
 
 #if ENABLE_DEBUG_OUTPUT
+                if (layer == SUPERKEYS_LAYER_ID_NONE)
+                {
+                    DEBUG_OUTPUT("Layer lock canceled");
+                }
+                else
+                {
+                    DEBUG_OUTPUT("Function layer lock activated");
+                }
+#endif
+
+                if (m_config.layerLockIndicator.code != 0)
+                {
+                    DWORD flags = 0;
+
+                    switch (m_config.layerLockIndicator.code)
+                    {
+                    case KeyCodes::CapsLock:
+                        flags = KEYBOARD_CAPS_LOCK_ON;
+                        break;
+                    case KeyCodes::NumLock:
+                        flags = KEYBOARD_NUM_LOCK_ON;
+                        break;
+                    case KeyCodes::ScrollLock:
+                        flags = KEYBOARD_SCROLL_LOCK_ON;
+                        break;
+                    }
+
                     if (layer == SUPERKEYS_LAYER_ID_NONE)
                     {
-                        DEBUG_OUTPUT("Layer lock canceled");
+                        m_ledControl.Disable(flags);
                     }
                     else
                     {
-                        DEBUG_OUTPUT("Function layer lock activated");
-                    }
-#endif
-
-                    if (m_config.layerLockIndicator.code != 0)
-                    {
-                        DWORD flags = 0;
-
-                        switch (m_config.layerLockIndicator.code)
-                        {
-                        case KeyCodes::CapsLock:
-                            flags = KEYBOARD_CAPS_LOCK_ON;
-                            break;
-                        case KeyCodes::NumLock:
-                            flags = KEYBOARD_NUM_LOCK_ON;
-                            break;
-                        case KeyCodes::ScrollLock:
-                            flags = KEYBOARD_SCROLL_LOCK_ON;
-                            break;
-                        }
-
-                        if (layer == SUPERKEYS_LAYER_ID_NONE)
-                        {
-                            m_ledControl.Disable(flags);
-                        }
-                        else
-                        {
-                            m_ledControl.Enable(flags);
-                        }
+                        m_ledControl.Enable(flags);
                     }
                 }
             }
@@ -238,11 +236,11 @@ namespace SuperKeys
 
                             if (fnKeyConsecutiveToggleCount == 1)
                             {
-                                SetLockedLayer(SUPERKEYS_LAYER_ID_NONE, device, stroke);
+                                SetLockedLayer(SUPERKEYS_LAYER_ID_NONE);
                             }
                             else if (fnKeyConsecutiveToggleCount == 2)
                             {
-                                SetLockedLayer(SUPERKEYS_LAYER_ID_FUNCTION, device, stroke);
+                                SetLockedLayer(SUPERKEYS_LAYER_ID_FUNCTION);
                             }
                         }
 

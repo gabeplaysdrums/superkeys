@@ -29,8 +29,10 @@ namespace Details {
     {
         KEYBOARD_INDICATOR_PARAMETERS params;
         DWORD bytesReturned;
+        BOOL result;
 
-        DeviceIoControl(m_device.Get(), IOCTL_KEYBOARD_QUERY_INDICATORS, 0, 0, &params, sizeof(params), &bytesReturned, 0);
+        result = DeviceIoControl(m_device.Get(), IOCTL_KEYBOARD_QUERY_INDICATORS, 0, 0, &params, sizeof(params), &bytesReturned, 0);
+        assert(!!result);
         assert(bytesReturned == sizeof(params));
 
         // clear all led status bits
@@ -38,8 +40,8 @@ namespace Details {
         // set status bits we care about
         params.LedFlags |= enableFlags;
 
-        DeviceIoControl(m_device.Get(), IOCTL_KEYBOARD_SET_INDICATORS, &params, sizeof(params), 0, 0, &bytesReturned, 0);
-        assert(bytesReturned == sizeof(params));
+        result = DeviceIoControl(m_device.Get(), IOCTL_KEYBOARD_SET_INDICATORS, &params, sizeof(params), 0, 0, &bytesReturned, 0);
+        assert(!!result);
     }
 
     void KeyboardLedControl::StartBlink(DWORD flags)
