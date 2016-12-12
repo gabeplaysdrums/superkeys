@@ -5,6 +5,7 @@
 
 #include <interception.h>
 #include "SuperKeys.h"
+#include "KeyboardLedControl.h"
 
 #include <iostream>
 #include <map>
@@ -35,6 +36,13 @@ namespace SuperKeys
 {
     namespace Details
     {
+        namespace KeyCodes
+        {
+            static const unsigned short CapsLock = 58;
+            static const unsigned short NumLock = 69;
+            static const unsigned short ScrollLock = 70;
+        }
+
         template<typename TLeft = SuperKeys_KeyStroke>
         static bool AreStrokesEqual(const TLeft& lhs, const SuperKeys_KeyStroke& rhs, unsigned short mask)
         {
@@ -164,6 +172,32 @@ namespace SuperKeys
 
                     if (m_config.layerLockIndicator.code != 0)
                     {
+                        DWORD flags = 0;
+
+                        switch (m_config.layerLockIndicator.code)
+                        {
+                        case KeyCodes::CapsLock:
+                            flags = KEYBOARD_CAPS_LOCK_ON;
+                            break;
+                        case KeyCodes::NumLock:
+                            flags = KEYBOARD_NUM_LOCK_ON;
+                            break;
+                        case KeyCodes::ScrollLock:
+                            flags = KEYBOARD_SCROLL_LOCK_ON;
+                            break;
+                        }
+
+                        if (layer == SUPERKEYS_LAYER_ID_NONE)
+                        {
+                            m_ledControl.Disable(flags);
+                        }
+                        else
+                        {
+                            m_ledControl.Enable(flags);
+                        }
+
+
+#if 0
                         // send indicator key strokes
                         InterceptionKeyStroke strokes[] = { stroke, stroke };
                         strokes[0].code = strokes[1].code = m_config.layerLockIndicator.code;
@@ -171,6 +205,7 @@ namespace SuperKeys
                         strokes[1].state |= INTERCEPTION_KEY_UP;
 
                         interception_send(m_interception, device, (InterceptionStroke*)&strokes, 2);
+#endif
                     }
                 }
             }
@@ -378,6 +413,8 @@ namespace SuperKeys
 
             std::map<SuperKeys_LayerId, RuleMap> m_layers = { { SUPERKEYS_LAYER_ID_FUNCTION, RuleMap() } };
             SuperKeys_LayerId m_lockedLayer = SUPERKEYS_LAYER_ID_NONE;
+
+            KeyboardLedControl m_ledControl;
         };
     }
 }
