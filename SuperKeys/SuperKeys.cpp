@@ -38,6 +38,8 @@ namespace SuperKeys
     {
         namespace KeyCodes
         {
+            static const unsigned short LeftShift = 42;
+            static const unsigned short RightShift = 54;
             static const unsigned short CapsLock = 58;
             static const unsigned short NumLock = 69;
             static const unsigned short ScrollLock = 70;
@@ -154,6 +156,26 @@ namespace SuperKeys
                 interception_destroy_context(m_interception);
             }
 
+            DWORD GetIndicatorKeyLedControlFlags() const
+            {
+                DWORD flags = 0;
+
+                switch (m_config.indicatorKey.code)
+                {
+                case KeyCodes::CapsLock:
+                    flags = KEYBOARD_CAPS_LOCK_ON;
+                    break;
+                case KeyCodes::NumLock:
+                    flags = KEYBOARD_NUM_LOCK_ON;
+                    break;
+                case KeyCodes::ScrollLock:
+                    flags = KEYBOARD_SCROLL_LOCK_ON;
+                    break;
+                }
+
+                return flags;
+            }
+
             void SetLockedLayer(SuperKeys_LayerId layer)
             {
                 m_lockedLayer = layer;
@@ -169,30 +191,15 @@ namespace SuperKeys
                 }
 #endif
 
-                if (m_config.layerLockIndicator.code != 0)
+                if (m_config.indicatorKey.code != 0)
                 {
-                    DWORD flags = 0;
-
-                    switch (m_config.layerLockIndicator.code)
-                    {
-                    case KeyCodes::CapsLock:
-                        flags = KEYBOARD_CAPS_LOCK_ON;
-                        break;
-                    case KeyCodes::NumLock:
-                        flags = KEYBOARD_NUM_LOCK_ON;
-                        break;
-                    case KeyCodes::ScrollLock:
-                        flags = KEYBOARD_SCROLL_LOCK_ON;
-                        break;
-                    }
-
                     if (layer == SUPERKEYS_LAYER_ID_NONE)
                     {
-                        m_ledControl.Disable(flags);
+                        m_ledControl.Disable(GetIndicatorKeyLedControlFlags());
                     }
                     else
                     {
-                        m_ledControl.Enable(flags);
+                        m_ledControl.Enable(GetIndicatorKeyLedControlFlags());
                     }
                 }
             }
@@ -204,7 +211,9 @@ namespace SuperKeys
                 InterceptionKeyStroke prevStroke;
 
                 unsigned short fnKeyState = INTERCEPTION_KEY_UP;
+                unsigned short fnSelectModifierKeyState = INTERCEPTION_KEY_UP;
                 unsigned short fnKeyConsecutiveToggleCount = 0;
+                bool fnSelectEnabled = false;
                 clock::time_point fnKeyConsecutiveToggleTime;
                 const auto fnKeyConsecutiveToggleTimeout = chrono::milliseconds(500);
 
@@ -216,7 +225,42 @@ namespace SuperKeys
 
                     bool cancelStroke = false;
 
-                    if (AreStrokesEqual(stroke, m_config.fnKey, ~0x1))
+                    if (fnSelectEnabled)
+                    {
+                        cancelStroke = true;
+
+                        // ignore modifier strokes and down strokes in layer select mode
+                        if (!AreStrokesEqual(stroke, m_config.fnSelectModifierKey, ~0x1) && (stroke.state & INTERCEPTION_KEY_UP) != 0)
+                        {
+                            if (AreStrokesEqual(stroke, m_config.fnKey, ~0x1))
+                            {
+                                DEBUG_OUTPUT("FN select: default");
+                                m_currentFnLayer = SUPERKEYS_LAYER_ID_FUNCTION;
+                            }
+                            else
+                            {
+                                //TODO: check for layer-defined keys
+                            }
+
+                            DEBUG_OUTPUT("FN select disabled");
+                            fnSelectEnabled = false;
+
+                            if (m_config.indicatorKey.code != 0)
+                            {
+                                m_ledControl.StopBlink();
+
+                                // assert locked layer to reset LED status
+                                SetLockedLayer(m_lockedLayer);
+                            }
+
+                            // send up stroke of FN select modifier key to avoid weird states
+                            InterceptionKeyStroke tempStroke = stroke;
+                            tempStroke.code = m_config.fnSelectModifierKey.code;
+                            tempStroke.state = m_config.fnSelectModifierKey.state | INTERCEPTION_KEY_UP;
+                            interception_send(m_interception, device, (InterceptionStroke*)&tempStroke, 1);
+                        }
+                    }
+                    else if (AreStrokesEqual(stroke, m_config.fnKey, ~0x1))
                     {
                         DEBUG_OUTPUT("FN key " << (((stroke.state & INTERCEPTION_KEY_UP) != 0) ? "up" : "down"));
                         cancelStroke = true;
@@ -234,13 +278,29 @@ namespace SuperKeys
                             fnKeyConsecutiveToggleTime = now;
                             DEBUG_OUTPUT("FN key toggled " << fnKeyConsecutiveToggleCount << " consecutive times");
 
-                            if (fnKeyConsecutiveToggleCount == 1)
+                            if ((fnSelectModifierKeyState & INTERCEPTION_KEY_UP) == 0)
                             {
-                                SetLockedLayer(SUPERKEYS_LAYER_ID_NONE);
+                                if (fnKeyConsecutiveToggleCount == 2)
+                                {
+                                    DEBUG_OUTPUT("FN select enabled");
+                                    fnSelectEnabled = true;
+
+                                    if (m_config.indicatorKey.code != 0)
+                                    {
+                                        m_ledControl.StartBlink(GetIndicatorKeyLedControlFlags());
+                                    }
+                                }
                             }
-                            else if (fnKeyConsecutiveToggleCount == 2)
+                            else
                             {
-                                SetLockedLayer(SUPERKEYS_LAYER_ID_FUNCTION);
+                                if (fnKeyConsecutiveToggleCount == 1)
+                                {
+                                    SetLockedLayer(SUPERKEYS_LAYER_ID_NONE);
+                                }
+                                else if (fnKeyConsecutiveToggleCount == 2)
+                                {
+                                    SetLockedLayer(m_currentFnLayer);
+                                }
                             }
                         }
 
@@ -253,7 +313,7 @@ namespace SuperKeys
 
                         if ((fnKeyState & INTERCEPTION_KEY_UP) == 0)
                         {
-                            layer = SUPERKEYS_LAYER_ID_FUNCTION;
+                            layer = m_currentFnLayer;
                         }
 
                         // if a layer is active, disable pass through
@@ -305,6 +365,11 @@ namespace SuperKeys
                         DEBUG_OUTPUT("send >> device: " << device << ", code: " << stroke.code << ", state: " << stroke.state);
                         interception_send(m_interception, device, (InterceptionStroke*)&stroke, 1);
                     }
+
+                    if (AreStrokesEqual(stroke, m_config.fnSelectModifierKey, ~0x1))
+                    {
+                        fnSelectModifierKeyState = stroke.state;
+                    }
                 }
             }
 
@@ -320,7 +385,7 @@ namespace SuperKeys
                 {
                     for (size_t i = 0; i < action.nStrokes; i++)
                     {
-                        if (AreStrokesEqual(action.strokes[i], m_config.layerLockIndicator, ~0x1))
+                        if (AreStrokesEqual(action.strokes[i], m_config.indicatorKey, ~0x1))
                         {
                             valid = false;
                             break;
@@ -399,6 +464,7 @@ namespace SuperKeys
             typedef map<unsigned short /*code*/, vector<Rule> /*rules*/> RuleMap;
 
             std::map<SuperKeys_LayerId, RuleMap> m_layers = { { SUPERKEYS_LAYER_ID_FUNCTION, RuleMap() } };
+            SuperKeys_LayerId m_currentFnLayer = SUPERKEYS_LAYER_ID_FUNCTION;
             SuperKeys_LayerId m_lockedLayer = SUPERKEYS_LAYER_ID_NONE;
 
             KeyboardLedControl m_ledControl;

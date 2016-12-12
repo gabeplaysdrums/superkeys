@@ -135,7 +135,8 @@ SUPERKEYS_LAYER_ID_FUNCTION = 1
 class SuperKeys_EngineConfig(ctypes.Structure):
     _fields_ = (
         ('fnKey', SuperKeys_KeyStroke),
-        ('layerLockIndicator', SuperKeys_KeyStroke),
+        ('indicatorKey', SuperKeys_KeyStroke),
+        ('fnSelectModifierKey', SuperKeys_KeyStroke),
     )
 
 class SuperKeysEngine:
@@ -172,7 +173,8 @@ if __name__ == '__main__':
 
     raw_config = SuperKeys_EngineConfig()
     ActionList.parse_stroke(getattr(config, 'FUNCTION_KEY', 'CapsLock'), raw_config.fnKey, allow_single_direction=False)
-    ActionList.parse_stroke(getattr(config, 'LAYER_LOCK_ENABLED_INDICATOR', None), raw_config.layerLockIndicator, allow_single_direction=False)
+    ActionList.parse_stroke(getattr(config, 'INDICATOR_KEY', None), raw_config.indicatorKey, allow_single_direction=False)
+    ActionList.parse_stroke(getattr(config, 'FUNCTION_SELECT_MODIFIER_KEY', 'LeftShift'), raw_config.fnSelectModifierKey, allow_single_direction=False)
 
     engine = SuperKeysEngine(raw_config)
 

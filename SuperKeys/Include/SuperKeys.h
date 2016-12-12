@@ -55,7 +55,8 @@ extern "C" {
     typedef struct
     {
         SuperKeys_KeyStroke fnKey;
-        SuperKeys_KeyStroke layerLockIndicator;
+        SuperKeys_KeyStroke indicatorKey;
+        SuperKeys_KeyStroke fnSelectModifierKey;
     } SuperKeys_EngineConfig;
 
     typedef void* SuperKeys_EngineContext;
