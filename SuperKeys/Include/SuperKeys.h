@@ -91,7 +91,7 @@ extern "C" {
     //! Add an extra layer
     //!\param context - engine context
     //!\param stroke - key stroke used to select the layer when in layer select mode
-    SuperKeys_LayerId SuperKeys_AddLayer(
+    SuperKeys_LayerId SUPERKEYS_API SuperKeys_AddLayer(
         SuperKeys_EngineContext context, 
         const SuperKeys_KeyStroke* stroke);
 

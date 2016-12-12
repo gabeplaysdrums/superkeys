@@ -74,6 +74,12 @@ FUNCTION_LAYER_ACTIONS = {
     'x': type_down,
 }
 
+EXTRA_FUNCTION_LAYER_ACTIONS = {
+    'a': {
+        '+Enter': type_down,
+    },
+}
+
 """
 window_nav_enabled = False
 desktop_nav_enabled = False

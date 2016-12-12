@@ -45,6 +45,14 @@ namespace SuperKeys
             static const unsigned short ScrollLock = 70;
         }
 
+        typedef unsigned int KeyId;
+
+        template<typename TStroke = SuperKeys_KeyStroke>
+        static inline KeyId KeyIdFromStroke(const TStroke& stroke, unsigned int mask)
+        {
+            return (stroke.code << sizeof(unsigned short)) | (stroke.state & mask);
+        }
+
         template<typename TLeft = SuperKeys_KeyStroke>
         static bool AreStrokesEqual(const TLeft& lhs, const SuperKeys_KeyStroke& rhs, unsigned short mask)
         {
@@ -232,15 +240,31 @@ namespace SuperKeys
                         // ignore modifier strokes and down strokes in layer select mode
                         if (!AreStrokesEqual(stroke, m_config.fnSelectModifierKey, ~0x1) && (stroke.state & INTERCEPTION_KEY_UP) != 0)
                         {
+                            SuperKeys_LayerId layerId = m_currentFnLayer;
+
                             if (AreStrokesEqual(stroke, m_config.fnKey, ~0x1))
                             {
                                 DEBUG_OUTPUT("FN select: default");
-                                m_currentFnLayer = SUPERKEYS_LAYER_ID_FUNCTION;
+                                layerId = SUPERKEYS_LAYER_ID_FUNCTION;
                             }
                             else
                             {
-                                //TODO: check for layer-defined keys
+                                auto entry = m_keyToLayerMap.find(KeyIdFromStroke(stroke, ~0x1));
+
+                                if (entry != m_keyToLayerMap.end())
+                                {
+                                    DEBUG_OUTPUT("FN select: layer #" << entry->second);
+                                    layerId = entry->second;
+                                }
                             }
+
+                            // if the locked layer was the fn layer, set the locked layer to the new fn layer
+                            if (m_lockedLayer == m_currentFnLayer)
+                            {
+                                SetLockedLayer(layerId);
+                            }
+
+                            m_currentFnLayer = layerId;
 
                             DEBUG_OUTPUT("FN select disabled");
                             fnSelectEnabled = false;
@@ -373,6 +397,15 @@ namespace SuperKeys
                 }
             }
 
+            SuperKeys_LayerId AddLayer(
+                const SuperKeys_KeyStroke& stroke)
+            {
+                SuperKeys_LayerId layerId = m_nextLayerId++;
+                m_layers[layerId] = RuleMap();
+                m_keyToLayerMap[KeyIdFromStroke(stroke, ~0x1)] = layerId;
+                return layerId;
+            }
+
             SuperKeys_RuleId AddRule(
                 SuperKeys_LayerId layer,
                 const SuperKeys_KeyStroke& filter,
@@ -452,6 +485,7 @@ namespace SuperKeys
             InterceptionContext m_interception;
             SuperKeys_EngineConfig m_config;
             SuperKeys_RuleId m_nextRuleId = 1;
+            SuperKeys_LayerId m_nextLayerId = SUPERKEYS_LAYER_ID_FUNCTION + 1;
 
             struct Rule
             {
@@ -464,6 +498,7 @@ namespace SuperKeys
             typedef map<unsigned short /*code*/, vector<Rule> /*rules*/> RuleMap;
 
             std::map<SuperKeys_LayerId, RuleMap> m_layers = { { SUPERKEYS_LAYER_ID_FUNCTION, RuleMap() } };
+            std::map<KeyId, SuperKeys_LayerId> m_keyToLayerMap;
             SuperKeys_LayerId m_currentFnLayer = SUPERKEYS_LAYER_ID_FUNCTION;
             SuperKeys_LayerId m_lockedLayer = SUPERKEYS_LAYER_ID_NONE;
 
@@ -495,8 +530,7 @@ SuperKeys_LayerId SuperKeys_AddLayer(
     SuperKeys_EngineContext context, 
     const SuperKeys_KeyStroke* stroke)
 {
-    //TODO: implement
-    return SUPERKEYS_LAYER_ID_NONE;
+    return ((EngineContext*)context)->AddLayer(*stroke);
 }
 
 SuperKeys_RuleId SUPERKEYS_API SuperKeys_AddRule(

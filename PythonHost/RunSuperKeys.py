@@ -161,6 +161,11 @@ class SuperKeysEngine:
             ctypes.byref(action_list.raw_array),
             action_list.raw_count)
 
+    def add_layer(self, layer_stroke):
+        return superkeys.lib.SuperKeys_AddLayer(
+            self.context,
+            ctypes.byref(layer_stroke))
+
     def run(self):
         superkeys.lib.SuperKeys_Run(self.context);
 
@@ -178,12 +183,24 @@ if __name__ == '__main__':
 
     engine = SuperKeysEngine(raw_config)
 
-    for filter_text, action in getattr(config, 'FUNCTION_LAYER_ACTIONS', {}).items():
-        filter_stroke = SuperKeys_KeyStroke()
-        ActionList.parse_stroke(filter_text, filter_stroke)
-        action_list = ActionList(action)
-        rule_id = engine.add_rule(SUPERKEYS_LAYER_ID_FUNCTION, filter_stroke, action_list)
-        if rule_id == 0:
-            print('Invalid rule: %s : %s' % (repr(filter_text), repr(action)))
+    def parse_rules(layer_id, rules):
+        for filter_text, action in rules.items():
+            filter_stroke = SuperKeys_KeyStroke()
+            ActionList.parse_stroke(filter_text, filter_stroke)
+            action_list = ActionList(action)
+            rule_id = engine.add_rule(layer_id, filter_stroke, action_list)
+            if rule_id == 0:
+                print('Invalid rule: %s : %s' % (repr(filter_text), repr(action)))
+
+    parse_rules(SUPERKEYS_LAYER_ID_FUNCTION, getattr(config, 'FUNCTION_LAYER_ACTIONS', {}))
+
+    for stroke_text, rules in getattr(config, 'EXTRA_FUNCTION_LAYER_ACTIONS', {}).items():
+        layer_stroke = SuperKeys_KeyStroke()
+        ActionList.parse_stroke(stroke_text, layer_stroke, allow_single_direction=False)
+        layer_id = engine.add_layer(layer_stroke)
+        if layer_id == 0:
+            print('Invalid layer definition: %s : %s' % (repr(stroke_text), repr(rules)))
+            continue
+        parse_rules(layer_id, rules)
 
     engine.run()
