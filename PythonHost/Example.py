@@ -1,6 +1,6 @@
 import superkeys
 
-FUNCTION_KEY = 'CapsLock'
+FUNCTION_KEY = 'RightWin'
 
 # Use a status light on the keyboard to indicate that a layer lock is enabled. 
 # Possible values are CapsLock, ScrollLock, NumLock

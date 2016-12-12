@@ -195,17 +195,6 @@ namespace SuperKeys
                         {
                             m_ledControl.Enable(flags);
                         }
-
-
-#if 0
-                        // send indicator key strokes
-                        InterceptionKeyStroke strokes[] = { stroke, stroke };
-                        strokes[0].code = strokes[1].code = m_config.layerLockIndicator.code;
-                        strokes[0].state = strokes[1].state = m_config.layerLockIndicator.state;
-                        strokes[1].state |= INTERCEPTION_KEY_UP;
-
-                        interception_send(m_interception, device, (InterceptionStroke*)&strokes, 2);
-#endif
                     }
                 }
             }
