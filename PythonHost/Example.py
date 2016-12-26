@@ -1,4 +1,4 @@
-import superkeys
+from superkeys import *
 
 FUNCTION_KEY = 'LeftAlt'
 
@@ -31,7 +31,7 @@ def type_down(context):
 def type_up(context):
     context.send('u', 'p', 'Space')
 
-FUNCTION_LAYER_ACTIONS = {
+DEFAULT_FUNCTION_LAYER_ACTIONS = {
     'i': 'UpArrow', 
     'j': 'LeftArrow',
     'k': 'DownArrow',
@@ -74,11 +74,9 @@ FUNCTION_LAYER_ACTIONS = {
     'x': type_down,
 }
 
-EXTRA_FUNCTION_LAYER_ACTIONS = {
-    'a': {
-        '+Enter': type_down,
-    },
-}
+register.function_layer(key='a', rules={
+    '+Enter': type_down,
+})
 
 """
 window_nav_enabled = False

@@ -3,6 +3,7 @@ import re
 import types
 import traceback
 import sys
+from abc import ABCMeta, abstractmethod
 
 lib = None
 
@@ -279,3 +280,17 @@ class ActionList:
         for stroke_text in filter(None, ActionList._stroke_delim.split(value)):
             ActionList.parse_stroke(stroke_text, raw_action.strokes[raw_action.nStrokes], allow_single_direction=False)
             raw_action.nStrokes += 1
+
+class Registrar:
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def function_layer(self, rules, key=None):
+        """
+        Register a function layer
+        actions - dictionary of action bindings for the layer
+        key - key binding used to activate the layer
+        """
+        return None
+
+register = None

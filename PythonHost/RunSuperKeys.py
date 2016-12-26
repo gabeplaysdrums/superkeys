@@ -161,20 +161,34 @@ class SuperKeysEngine:
             ctypes.byref(action_list.raw_array),
             action_list.raw_count)
 
-    def add_layer(self, layer_stroke):
+    def add_layer(self, layer_id, layer_stroke):
         return superkeys.lib.SuperKeys_AddLayer(
             self.context,
+            layer_id, 
             ctypes.byref(layer_stroke))
 
     def run(self):
         superkeys.lib.SuperKeys_Run(self.context);
 
-
 if __name__ == '__main__':
     (options, args) = parse_command_line()
-    config = imp.load_source('', args[0])
 
     superkeys.lib = ctypes.CDLL(os.path.join(SCRIPT_DIR, 'SuperKeys.dll'))
+
+    class RegistrarImpl(superkeys.Registrar):
+        def __init__(self):
+            self._layers = []
+            self._next_layer_id = SUPERKEYS_LAYER_ID_FUNCTION + 1
+
+        def function_layer(self, rules, key=None):
+            layer_id = self._next_layer_id
+            self._next_layer_id += 1
+            self._layers.append((layer_id, key, rules))
+
+
+    superkeys.register = RegistrarImpl()
+
+    config = imp.load_source('', args[0])
 
     raw_config = SuperKeys_EngineConfig()
     ActionList.parse_stroke(getattr(config, 'FUNCTION_KEY', 'CapsLock'), raw_config.fnKey, allow_single_direction=False)
@@ -192,15 +206,16 @@ if __name__ == '__main__':
             if rule_id == 0:
                 print('Invalid rule: %s : %s' % (repr(filter_text), repr(action)))
 
-    parse_rules(SUPERKEYS_LAYER_ID_FUNCTION, getattr(config, 'FUNCTION_LAYER_ACTIONS', {}))
+    parse_rules(SUPERKEYS_LAYER_ID_FUNCTION, getattr(config, 'DEFAULT_FUNCTION_LAYER_ACTIONS', {}))
 
-    for stroke_text, rules in getattr(config, 'EXTRA_FUNCTION_LAYER_ACTIONS', {}).items():
+    for layer_id, stroke_text, rules in superkeys.register._layers:
+        print('adding non-default function layer: key=%s' % (stroke_text,))
         layer_stroke = SuperKeys_KeyStroke()
         ActionList.parse_stroke(stroke_text, layer_stroke, allow_single_direction=False)
-        layer_id = engine.add_layer(layer_stroke)
-        if layer_id == 0:
-            print('Invalid layer definition: %s : %s' % (repr(stroke_text), repr(rules)))
-            continue
+        engine.add_layer(layer_id, layer_stroke)
         parse_rules(layer_id, rules)
+
+    # free registrar resources
+    del superkeys.register
 
     engine.run()

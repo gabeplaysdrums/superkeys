@@ -397,13 +397,17 @@ namespace SuperKeys
                 }
             }
 
-            SuperKeys_LayerId AddLayer(
+            void AddLayer(
+                SuperKeys_LayerId layerId,
                 const SuperKeys_KeyStroke& stroke)
             {
-                SuperKeys_LayerId layerId = m_nextLayerId++;
+                if (layerId == SUPERKEYS_LAYER_ID_FUNCTION)
+                {
+                    return;
+                }
+
                 m_layers[layerId] = RuleMap();
                 m_keyToLayerMap[KeyIdFromStroke(stroke, ~0x1)] = layerId;
-                return layerId;
             }
 
             SuperKeys_RuleId AddRule(
@@ -526,11 +530,12 @@ void SUPERKEYS_API SuperKeys_Run(SuperKeys_EngineContext context)
     ((EngineContext*)context)->Run();
 }
 
-SuperKeys_LayerId SuperKeys_AddLayer(
+void SuperKeys_AddLayer(
     SuperKeys_EngineContext context, 
+    SuperKeys_LayerId layerId,
     const SuperKeys_KeyStroke* stroke)
 {
-    return ((EngineContext*)context)->AddLayer(*stroke);
+    return ((EngineContext*)context)->AddLayer(layerId, *stroke);
 }
 
 SuperKeys_RuleId SUPERKEYS_API SuperKeys_AddRule(
