@@ -14,7 +14,7 @@
     <RootNamespace>PythonHost</RootNamespace>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <CommandLineArguments>Example.py</CommandLineArguments>
+    <CommandLineArguments>AnnePro.py</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -25,6 +25,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AnnePro.py" />
     <Compile Include="Example.py">
       <SubType>Code</SubType>
     </Compile>

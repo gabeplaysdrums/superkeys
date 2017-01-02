@@ -261,7 +261,7 @@ class ActionList:
             return
         raw_stroke.mask = ~0x1
         raw_stroke.state = 0
-        if allow_single_direction and (value[0] == '-' or value[0] == '+'):
+        if allow_single_direction and (value[0] == '-' or value[0] == '+') and value[1:]:
             raw_stroke.state = (INTERCEPTION_KEY_UP if value[0] == '-' else 0)
             raw_stroke.mask = ~0x0
             value = value[1:]
